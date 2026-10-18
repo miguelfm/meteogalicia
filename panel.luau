@@ -67,13 +67,13 @@ local SCALES: { [string]: ScaleConfig } = {
         headerTemp = 32,
         headerDeg = 18,
         headerMinMax = 13,
-        headerSunIcon = 15,
-        headerSunText = 10,
-        headerSunTime = 12,
-        headerSunPadH = 10,
-        headerSunPadV = 5,
-        headerSunGap = 10,
-        headerSunDividerHeight = 18,
+        headerSunIcon = 28,
+        headerSunText = 12,
+        headerSunTime = 16,
+        headerSunPadH = 14,
+        headerSunPadV = 8,
+        headerSunGap = 14,
+        headerSunDividerHeight = 28,
         sectionIcon = 15,
         sectionTitle = 14,
         sectionSub = 11,
@@ -113,13 +113,13 @@ local SCALES: { [string]: ScaleConfig } = {
         headerTemp = 42,
         headerDeg = 24,
         headerMinMax = 16,
-        headerSunIcon = 20,
-        headerSunText = 12,
-        headerSunTime = 16,
-        headerSunPadH = 14,
-        headerSunPadV = 8,
-        headerSunGap = 14,
-        headerSunDividerHeight = 26,
+        headerSunIcon = 36,
+        headerSunText = 14,
+        headerSunTime = 20,
+        headerSunPadH = 18,
+        headerSunPadV = 10,
+        headerSunGap = 16,
+        headerSunDividerHeight = 34,
         sectionIcon = 18,
         sectionTitle = 17,
         sectionSub = 13,
@@ -152,47 +152,47 @@ local SCALES: { [string]: ScaleConfig } = {
     xlarge = {
         panelPadding = 24,
         panelGap = 16,
-        headerGlyph = 70,
-        headerTown = 34,
-        headerBadge = 13,
-        headerDesc = 18,
-        headerTemp = 52,
-        headerDeg = 28,
-        headerMinMax = 18,
-        headerSunIcon = 26,
-        headerSunText = 13,
-        headerSunTime = 19,
-        headerSunPadH = 18,
-        headerSunPadV = 10,
+        headerGlyph = 76,
+        headerTown = 38,
+        headerBadge = 14,
+        headerDesc = 20,
+        headerTemp = 60,
+        headerDeg = 30,
+        headerMinMax = 20,
+        headerSunIcon = 44,
+        headerSunText = 17,
+        headerSunTime = 26,
+        headerSunPadH = 22,
+        headerSunPadV = 12,
         headerSunGap = 18,
-        headerSunDividerHeight = 32,
-        sectionIcon = 22,
-        sectionTitle = 20,
-        sectionSub = 15,
+        headerSunDividerHeight = 42,
+        sectionIcon = 24,
+        sectionTitle = 22,
+        sectionSub = 16,
         hourlyWidth = 88,
         hourlyPad = 10,
         hourlyGap = 8,
-        hourlyTime = 14,
-        hourlyGlyph = 36,
-        hourlyTemp = 19,
-        hourlyRainIcon = 13,
-        hourlyRainText = 14,
-        hourlyRowGap = 10,
+        hourlyTime = 16,
+        hourlyGlyph = 42,
+        hourlyTemp = 22,
+        hourlyRainIcon = 15,
+        hourlyRainText = 16,
+        hourlyRowGap = 8,
         dailyPad = 14,
         dailyGap = 8,
-        dailyTitle = 17,
-        dailyDate = 14,
-        dailyGlyph = 42,
-        dailyDesc = 15,
-        dailyTemp = 17,
-        dailyRainIcon = 15,
-        dailyRainText = 14,
-        dailyWindText = 13,
-        commentTitle = 17,
-        commentText = 15,
+        dailyTitle = 20,
+        dailyDate = 15,
+        dailyGlyph = 48,
+        dailyDesc = 16,
+        dailyTemp = 20,
+        dailyRainIcon = 16,
+        dailyRainText = 16,
+        dailyWindText = 14,
+        commentTitle = 20,
+        commentText = 17,
         commentPad = 16,
-        footerIcon = 19,
-        footerText = 15,
+        footerIcon = 20,
+        footerText = 16,
         btnSize = "lg",
     },
 }
@@ -317,62 +317,42 @@ local function render()
         sunset = sunset or s_time
     end
 
-    local solarBadge = ui.row({
-        gap = s.headerSunGap,
-        align = "center",
-        paddingH = s.headerSunPadH,
-        paddingV = s.headerSunPadV,
-        radius = 12,
-        fill = cardBgNorm,
-        border = "outline/0.25",
-        borderWidth = 1,
-        tooltip = tr("ui.solar_tooltip", "Horarios solares: Orto (amencer) e Ocaso (solpor)"),
-    }, {
-        ui.row({ gap = 8, align = "center" }, {
+    local makeSolarCard = function(iconName, iconColor, labelText, timeText)
+        return ui.row({
+            gap = math.max(8, math.floor(s.headerSunGap * 0.6)),
+            align = "center",
+            paddingH = s.headerSunPadH,
+            paddingV = s.headerSunPadV,
+            radius = 12,
+            fill = cardBgNorm,
+            border = "outline/0.25",
+            borderWidth = 1,
+            tooltip = tr("ui.solar_tooltip", "Horarios solares: Orto (amencer) e Ocaso (solpor)"),
+        }, {
             ui.glyph({
-                name = "weather-sunrise",
+                name = iconName,
                 size = s.headerSunIcon,
-                color = "tertiary",
+                color = iconColor,
             }),
-            ui.column({ gap = 1 }, {
+            ui.column({ gap = 2 }, {
                 ui.label({
-                    text = tr("ui.sunrise", "Orto"),
+                    text = labelText,
                     fontSize = s.headerSunText,
                     color = "on_surface_variant",
                 }),
                 ui.label({
-                    text = sunrise,
+                    text = timeText,
                     fontSize = s.headerSunTime,
                     fontWeight = "bold",
                     color = "on_surface",
                 }),
             }),
-        }),
-        ui.column({
-            width = 1,
-            height = s.headerSunDividerHeight,
-            fill = "outline/0.30",
-        }, {}),
-        ui.row({ gap = 8, align = "center" }, {
-            ui.glyph({
-                name = "weather-sunset",
-                size = s.headerSunIcon,
-                color = "secondary",
-            }),
-            ui.column({ gap = 1 }, {
-                ui.label({
-                    text = tr("ui.sunset", "Ocaso"),
-                    fontSize = s.headerSunText,
-                    color = "on_surface_variant",
-                }),
-                ui.label({
-                    text = sunset,
-                    fontSize = s.headerSunTime,
-                    fontWeight = "bold",
-                    color = "on_surface",
-                }),
-            }),
-        }),
+        })
+    end
+
+    local solarCards = ui.row({ gap = 12, align = "center" }, {
+        makeSolarCard("weather-sunrise", "tertiary", tr("ui.sunrise", "Orto"), sunrise),
+        makeSolarCard("weather-sunset", "secondary", tr("ui.sunset", "Ocaso"), sunset),
     })
 
     local headerRow = ui.row({ gap = 16, align = "center" }, {
@@ -404,7 +384,7 @@ local function render()
             }),
         }),
         ui.spacer(),
-        solarBadge,
+        solarCards,
         ui.spacer(),
         ui.column({ gap = 2, align = "end" }, {
             ui.row({ gap = 4, align = "center" }, {
@@ -479,9 +459,9 @@ local function render()
         local cardTooltip = dayHint .. " ás " .. (h.time or "--:--")
 
         hourCards[#hourCards + 1] = ui.column({
+            flexGrow = 1,
             gap = s.hourlyGap,
             align = "center",
-            width = s.hourlyWidth,
             padding = s.hourlyPad,
             radius = 8,
             fill = cardBg,
@@ -657,7 +637,6 @@ local function render()
     end
 
     -- ── 5. BADGES INFORMATIVOS E PE DE PÁXINA ─────────────────────────────────
-    rootChildren[#rootChildren + 1] = ui.spacer()
     rootChildren[#rootChildren + 1] = ui.separator()
 
     local indicators = {}
@@ -697,21 +676,12 @@ local function render()
     local footerRow = ui.row({ gap = 16, align = "center" }, {
         ui.row({ gap = 14, align = "center" }, indicators),
         ui.spacer(),
-        ui.row({ gap = 8, align = "center" }, {
-            ui.button({
-                text = tr("ui.settings", "Axustes"),
-                glyph = "settings",
-                variant = "outline",
-                controlSize = s.btnSize,
-                onClick = "onOpenSettings",
-            }),
-            ui.button({
-                text = tr("ui.open_web", "Abrir na web"),
-                glyph = "external-link",
-                variant = "outline",
-                controlSize = s.btnSize,
-                onClick = "onOpenWeb",
-            }),
+        ui.button({
+            text = tr("ui.open_web", "Abrir na web"),
+            glyph = "external-link",
+            variant = "outline",
+            controlSize = s.btnSize,
+            onClick = "onOpenWeb",
         }),
     })
 
