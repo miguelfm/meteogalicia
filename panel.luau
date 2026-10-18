@@ -336,61 +336,68 @@ local function render()
     -- ── 2. PRESTRIP / TIRA HORARIA ────────────────────────────────────────────
     rootChildren[#rootChildren + 1] = ui.row({ gap = 6, align = "center" }, {
         ui.glyph({ name = "clock", size = s.sectionIcon, color = "primary" }),
-        ui.label({ text = tr("ui.hourly_title", "Predición por horas (Hoxe)"), fontSize = s.sectionTitle, fontWeight = "bold", color = "on_surface" }),
+        ui.label({ text = tr("ui.hourly_title", "Predición por horas"), fontSize = s.sectionTitle, fontWeight = "bold", color = "on_surface" }),
         ui.spacer(),
         ui.label({ text = string.format(tr("ui.upcoming_hours", "Próximas %d horas"), math.min(hoursLimit, #hourly)), fontSize = s.sectionSub, color = "on_surface_variant" }),
     })
 
     local hourCards = {}
-    local currentHourNum = tonumber(os.date("%H")) or 0
+    local currentHourSec = math.floor(os.time() / 3600) * 3600
 
-    local count = 0
-    for _, h in ipairs(hourly) do
-        if h.hourNum >= currentHourNum or count > 0 or #hourly <= hoursLimit then
-            count = count + 1
-            if count > hoursLimit then break end
+    for idx, h in ipairs(hourly) do
+        if idx > hoursLimit then break end
 
-            local isCurrent = (h.hourNum == currentHourNum)
-            local cardBg = isCurrent and cardBgActive or cardBgNorm
-            local cardBorder = isCurrent and "primary/0.60" or "outline/0.25"
+        local isCurrent = (h.timestamp == currentHourSec) or (idx == 1 and not h.isTomorrow)
+        local cardBg = isCurrent and cardBgActive or cardBgNorm
+        local cardBorder = isCurrent and "primary/0.60" or "outline/0.25"
 
-            hourCards[#hourCards + 1] = ui.column({
-                gap = s.hourlyGap,
-                align = "center",
-                width = s.hourlyWidth,
-                padding = s.hourlyPad,
-                radius = 8,
-                fill = cardBg,
-                border = cardBorder,
-                borderWidth = 1,
-            }, {
-                ui.label({
-                    text = h.time or "--:--",
-                    fontSize = s.hourlyTime,
-                    fontWeight = isCurrent and "bold" or "normal",
-                    color = isCurrent and "primary" or "on_surface_variant",
-                }),
-                ui.glyph({
-                    name = h.glyph or "cloud",
-                    size = s.hourlyGlyph,
-                    color = h.color or "on_surface",
-                }),
-                ui.label({
-                    text = tostring(h.temp or 0) .. "°",
-                    fontSize = s.hourlyTemp,
-                    fontWeight = "bold",
-                    color = "on_surface",
-                }),
-                ui.row({ gap = 1, align = "center" }, {
-                    ui.glyph({ name = "droplet", size = s.hourlyRainIcon, color = "secondary" }),
-                    ui.label({
-                        text = tostring(h.rainProb or 0) .. "%",
-                        fontSize = s.hourlyRainText,
-                        color = "secondary",
-                    }),
-                }),
-            })
+        local timeColor = "on_surface_variant"
+        if isCurrent then
+            timeColor = "primary"
+        elseif h.isTomorrow then
+            timeColor = "secondary"
         end
+
+        local dayHint = h.isTomorrow and tr("ui.tomorrow", "Mañá") or tr("ui.today", "Hoxe")
+        local cardTooltip = dayHint .. " ás " .. (h.time or "--:--")
+
+        hourCards[#hourCards + 1] = ui.column({
+            gap = s.hourlyGap,
+            align = "center",
+            width = s.hourlyWidth,
+            padding = s.hourlyPad,
+            radius = 8,
+            fill = cardBg,
+            border = cardBorder,
+            borderWidth = 1,
+            tooltip = cardTooltip,
+        }, {
+            ui.label({
+                text = h.time or "--:--",
+                fontSize = s.hourlyTime,
+                fontWeight = (isCurrent or h.isTomorrow) and "bold" or "normal",
+                color = timeColor,
+            }),
+            ui.glyph({
+                name = h.glyph or "cloud",
+                size = s.hourlyGlyph,
+                color = h.color or "on_surface",
+            }),
+            ui.label({
+                text = tostring(h.temp or 0) .. "°",
+                fontSize = s.hourlyTemp,
+                fontWeight = "bold",
+                color = "on_surface",
+            }),
+            ui.row({ gap = 1, align = "center" }, {
+                ui.glyph({ name = "droplet", size = s.hourlyRainIcon, color = "secondary" }),
+                ui.label({
+                    text = tostring(h.rainProb or 0) .. "%",
+                    fontSize = s.hourlyRainText,
+                    color = "secondary",
+                }),
+            }),
+        })
     end
 
     rootChildren[#rootChildren + 1] = ui.row({ gap = 8, align = "center" }, hourCards)

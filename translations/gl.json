@@ -23,7 +23,7 @@
   "settings.panel_opacity.option.opaque": "Opaco (Máis lexible)",
   "settings.panel_opacity.option.subtle": "Pouco transparente (Sutil)",
   "settings.panel_opacity.option.glass": "Translúcido (Efecto cristal)",
-  "ui.hourly_title": "Predición por horas (Hoxe)",
+  "ui.hourly_title": "Predición por horas",
   "ui.daily_title": "Resumo dos vindeiros días",
   "ui.today": "Hoxe",
   "ui.tomorrow": "Mañá",

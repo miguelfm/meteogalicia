@@ -52,148 +52,184 @@ local function poll()
             return
         end
 
-        -- 2. Obter predición por horas para a data de hoxe
-        local dateParam = os.date("!%Y-%m-%dT00%%3A00%%3A00.000Z")
-        local hourlyUrl = shared.BASE_API .. "concellos/predicion-horaria?idConcello=" .. tostring(concelloId) .. "&data=" .. dateParam .. "&idioma=gl"
+        -- 2. Obter predición por horas para hoxe e mañá (para garantir 12-24 horas continuas)
+        local nowSec = os.time()
+        local todayParam = os.date("!%Y-%m-%dT00%%3A00%%3A00.000Z", nowSec)
+        local tomorrowParam = os.date("!%Y-%m-%dT00%%3A00%%3A00.000Z", nowSec + 86400)
+
+        local hourlyTodayUrl = shared.BASE_API .. "concellos/predicion-horaria?idConcello=" .. tostring(concelloId) .. "&data=" .. todayParam .. "&idioma=gl"
+        local hourlyTomorrowUrl = shared.BASE_API .. "concellos/predicion-horaria?idConcello=" .. tostring(concelloId) .. "&data=" .. tomorrowParam .. "&idioma=gl"
 
         noctalia.http({
-            url = hourlyUrl,
+            url = hourlyTodayUrl,
             method = "GET",
             headers = headers,
         }, function(hourlyRes)
-            inFlight = false
-            noctalia.state.set("weather_loading", false)
-
             if not hourlyRes or not hourlyRes.ok or hourlyRes.status ~= 200 then
+                inFlight = false
+                noctalia.state.set("weather_loading", false)
                 noctalia.state.set("weather_error", "Erro ao obter predición horaria (" .. tostring(hourlyRes and hourlyRes.status or "rede") .. ")")
                 return
             end
 
-            local hourlyData = noctalia.json.decode(hourlyRes.body or "{}")
-            if not hourlyData or type(hourlyData) ~= "table" then
+            local hourlyDataToday = noctalia.json.decode(hourlyRes.body or "{}")
+            if not hourlyDataToday or type(hourlyDataToday) ~= "table" then
+                inFlight = false
+                noctalia.state.set("weather_loading", false)
                 noctalia.state.set("weather_error", "Formato de predición horaria non válido")
                 return
             end
 
-            -- Procesar datos diarios
-            local shortTermList = dailyData.forecastDataShortTerm or {}
-            local todayShort = shortTermList[1] or {}
-            local cleanComment = shared.cleanHtml(dailyData.comment or "")
+            -- Obter tamén as horas de mañá para cubrir as horas nocturnas e vindeiras
+            noctalia.http({
+                url = hourlyTomorrowUrl,
+                method = "GET",
+                headers = headers,
+            }, function(hourlyTomorrowRes)
+                inFlight = false
+                noctalia.state.set("weather_loading", false)
 
-            local todayInfo = {
-                tempMin = todayShort.temperatureMin or 0,
-                tempMax = todayShort.temperatureMax or 0,
-                skyId = todayShort.forecastSkyId or 101,
-                skyDesc = todayShort.forecastSkyDescription or "",
-                rainProb = todayShort.probabilityRain or 0,
-                windDesc = todayShort.forecastWindDescription or "",
-                uv = todayShort.uvMax or 0,
-                ica = todayShort.ica or 0,
-                comment = cleanComment,
-                warningLevel = todayShort.warningLevel or 0,
-            }
-
-            local dailyDays = {}
-            for idx, dEntry in ipairs(shortTermList) do
-                local reach = dEntry.reach or (idx - 1)
-                local sky = shared.getSky(dEntry.forecastSkyId)
-
-                local dateStr = dEntry.dateForecast or ""
-                local yStr, mStr, dStr = dateStr:match("(%d+)-(%d+)-(%d+)")
-                local y = tonumber(yStr) or 0
-                local m = tonumber(mStr) or 0
-                local d = tonumber(dStr) or 0
-                local wday = 0
-                if y > 0 and m > 0 and d > 0 then
-                    local t = os.time({ year = y, month = m, day = d, hour = 12 })
-                    wday = tonumber(os.date("%w", t)) or 0
+                local hourlyDataTomorrow = nil
+                if hourlyTomorrowRes and hourlyTomorrowRes.ok and hourlyTomorrowRes.status == 200 then
+                    hourlyDataTomorrow = noctalia.json.decode(hourlyTomorrowRes.body or "{}")
                 end
 
-                dailyDays[#dailyDays + 1] = {
-                    reach = reach,
-                    day = d,
-                    month = m,
-                    year = y,
-                    weekday = wday,
-                    tempMin = dEntry.temperatureMin or 0,
-                    tempMax = dEntry.temperatureMax or 0,
-                    skyId = dEntry.forecastSkyId or 101,
-                    skyDesc = dEntry.forecastSkyDescription or sky.desc,
-                    glyph = sky.glyph,
-                    color = sky.color,
-                    rainProb = dEntry.probabilityRain or 0,
-                    windDesc = dEntry.forecastWindDescription or "",
-                    warningLevel = dEntry.warningLevel or 0,
-                    uv = dEntry.uvMax or 0,
-                    ica = dEntry.ica or 0,
-                }
-            end
+                -- Procesar datos diarios
+                local shortTermList = dailyData.forecastDataShortTerm or {}
+                local todayShort = shortTermList[1] or {}
+                local cleanComment = shared.cleanHtml(dailyData.comment or "")
 
-            -- Procesar horas
-            local hoursRaw = hourlyData.forecastDataTime or {}
-            local nowLocalHour = tonumber(os.date("%H")) or 12
-            local currentEntry = nil
-            local processedHours = {}
-
-            for _, h in ipairs(hoursRaw) do
-                local ms = tonumber(h.date) or 0
-                local sec = math.floor(ms / 1000)
-                local hNum = tonumber(os.date("%H", sec)) or 0
-                local hTime = string.format("%02d:00", hNum)
-                local sky = shared.getSky(h.idSkyTrend)
-
-                local item = {
-                    time = hTime,
-                    hourNum = hNum,
-                    temp = h.averageTemperature or 0,
-                    rainProb = h.probabilityRain or 0,
-                    windSpeed = h.windSpeed or 0,
-                    windDesc = h.windTrendDescription or "",
-                    skyCode = h.idSkyTrend or 101,
-                    skyDesc = h.skyTrendDescription or sky.desc,
-                    glyph = sky.glyph,
-                    color = sky.color,
-                    ica = h.ica,
+                local todayInfo = {
+                    tempMin = todayShort.temperatureMin or 0,
+                    tempMax = todayShort.temperatureMax or 0,
+                    skyId = todayShort.forecastSkyId or 101,
+                    skyDesc = todayShort.forecastSkyDescription or "",
+                    rainProb = todayShort.probabilityRain or 0,
+                    windDesc = todayShort.forecastWindDescription or "",
+                    uv = todayShort.uvMax or 0,
+                    ica = todayShort.ica or 0,
+                    comment = cleanComment,
+                    warningLevel = todayShort.warningLevel or 0,
                 }
 
-                processedHours[#processedHours + 1] = item
+                local dailyDays = {}
+                for idx, dEntry in ipairs(shortTermList) do
+                    local reach = dEntry.reach or (idx - 1)
+                    local sky = shared.getSky(dEntry.forecastSkyId)
 
-                -- Seleccionar a hora actual
-                if hNum == nowLocalHour then
-                    currentEntry = item
+                    local dateStr = dEntry.dateForecast or ""
+                    local yStr, mStr, dStr = dateStr:match("(%d+)-(%d+)-(%d+)")
+                    local y = tonumber(yStr) or 0
+                    local m = tonumber(mStr) or 0
+                    local d = tonumber(dStr) or 0
+                    local wday = 0
+                    if y > 0 and m > 0 and d > 0 then
+                        local t = os.time({ year = y, month = m, day = d, hour = 12 })
+                        wday = tonumber(os.date("%w", t)) or 0
+                    end
+
+                    dailyDays[#dailyDays + 1] = {
+                        reach = reach,
+                        day = d,
+                        month = m,
+                        year = y,
+                        weekday = wday,
+                        tempMin = dEntry.temperatureMin or 0,
+                        tempMax = dEntry.temperatureMax or 0,
+                        skyId = dEntry.forecastSkyId or 101,
+                        skyDesc = dEntry.forecastSkyDescription or sky.desc,
+                        glyph = sky.glyph,
+                        color = sky.color,
+                        rainProb = dEntry.probabilityRain or 0,
+                        windDesc = dEntry.forecastWindDescription or "",
+                        warningLevel = dEntry.warningLevel or 0,
+                        uv = dEntry.uvMax or 0,
+                        ica = dEntry.ica or 0,
+                    }
                 end
-            end
 
-            -- Se non atopamos a hora exacta, usamos a primeira dispoñible
-            if not currentEntry and #processedHours > 0 then
-                currentEntry = processedHours[1]
-            end
+                -- Combinar horas de hoxe e mañá
+                local rawToday = (hourlyDataToday and hourlyDataToday.forecastDataTime) or {}
+                local rawTomorrow = (hourlyDataTomorrow and hourlyDataTomorrow.forecastDataTime) or {}
+                local combinedHours = {}
+                for _, h in ipairs(rawToday) do
+                    combinedHours[#combinedHours + 1] = h
+                end
+                for _, h in ipairs(rawTomorrow) do
+                    combinedHours[#combinedHours + 1] = h
+                end
 
-            local currentSky = shared.getSky(currentEntry and currentEntry.skyCode or todayInfo.skyId)
+                local currentHourSec = math.floor(nowSec / 3600) * 3600
+                local todayDateStr = os.date("%Y-%m-%d", nowSec)
+                local currentEntry = nil
+                local processedHours = {}
 
-            local payload = {
-                concelloId = concelloId,
-                concelloName = concelloName,
-                officialName = (dailyData.townHall and dailyData.townHall.name) or concelloName,
-                current = {
-                    temp = currentEntry and currentEntry.temp or todayInfo.tempMax,
-                    rainProb = currentEntry and currentEntry.rainProb or todayInfo.rainProb,
-                    windSpeed = currentEntry and currentEntry.windSpeed or 0,
-                    windDesc = currentEntry and currentEntry.windDesc or todayInfo.windDesc,
-                    skyCode = currentEntry and currentEntry.skyCode or todayInfo.skyId,
-                    skyDesc = currentEntry and currentEntry.skyDesc or todayInfo.skyDesc,
-                    glyph = currentSky.glyph,
-                    color = currentSky.color,
-                    time = currentEntry and currentEntry.time or string.format("%02d:00", nowLocalHour),
-                },
-                today = todayInfo,
-                dailyDays = dailyDays,
-                hourly = processedHours,
-                updatedAt = os.date("%H:%M"),
-            }
+                for _, h in ipairs(combinedHours) do
+                    local ms = tonumber(h.date) or 0
+                    local sec = math.floor(ms / 1000)
+                    local hNum = tonumber(os.date("%H", sec)) or 0
+                    local hTime = string.format("%02d:00", hNum)
+                    local itemDateStr = os.date("%Y-%m-%d", sec)
+                    local isTomorrow = (itemDateStr ~= todayDateStr)
+                    local sky = shared.getSky(h.idSkyTrend)
 
-            noctalia.state.set("weather_error", nil)
-            noctalia.state.set("weather", payload)
+                    local item = {
+                        time = hTime,
+                        hourNum = hNum,
+                        timestamp = sec,
+                        isTomorrow = isTomorrow,
+                        temp = h.averageTemperature or 0,
+                        rainProb = h.probabilityRain or 0,
+                        windSpeed = h.windSpeed or 0,
+                        windDesc = h.windTrendDescription or "",
+                        skyCode = h.idSkyTrend or 101,
+                        skyDesc = h.skyTrendDescription or sky.desc,
+                        glyph = sky.glyph,
+                        color = sky.color,
+                        ica = h.ica,
+                    }
+
+                    if sec == currentHourSec then
+                        currentEntry = item
+                    end
+
+                    -- Engadir horas dende a hora actual en adiante
+                    if sec >= currentHourSec then
+                        processedHours[#processedHours + 1] = item
+                    end
+                end
+
+                -- Se non atopamos a hora exacta actual, usamos a primeira dispoñible
+                if not currentEntry and #processedHours > 0 then
+                    currentEntry = processedHours[1]
+                end
+
+                local currentSky = shared.getSky(currentEntry and currentEntry.skyCode or todayInfo.skyId)
+
+                local payload = {
+                    concelloId = concelloId,
+                    concelloName = concelloName,
+                    officialName = (dailyData.townHall and dailyData.townHall.name) or concelloName,
+                    current = {
+                        temp = currentEntry and currentEntry.temp or todayInfo.tempMax,
+                        rainProb = currentEntry and currentEntry.rainProb or todayInfo.rainProb,
+                        windSpeed = currentEntry and currentEntry.windSpeed or 0,
+                        windDesc = currentEntry and currentEntry.windDesc or todayInfo.windDesc,
+                        skyCode = currentEntry and currentEntry.skyCode or todayInfo.skyId,
+                        skyDesc = currentEntry and currentEntry.skyDesc or todayInfo.skyDesc,
+                        glyph = currentSky.glyph,
+                        color = currentSky.color,
+                        time = currentEntry and currentEntry.time or string.format("%02d:00", tonumber(os.date("%H", nowSec)) or 12),
+                    },
+                    today = todayInfo,
+                    dailyDays = dailyDays,
+                    hourly = processedHours,
+                    updatedAt = os.date("%H:%M"),
+                }
+
+                noctalia.state.set("weather_error", nil)
+                noctalia.state.set("weather", payload)
+            end)
         end)
     end)
 end
