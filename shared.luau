@@ -434,16 +434,13 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
 ]], mx, my, mx, my - 8, tempFontSize, tMax, nx, ny, nx, ny + 18, tempFontSize, tMinD)
     end
 
-    -- Cabeceira de cada día (Día, Data, Icona, Predición e Probabilidade de choiva con alto contraste e indicador de tamaño)
+    -- Cabeceira de cada día (Día, Data, Icona, Predición e Probabilidade de choiva integrados en horizontal)
     local dayY = 22
     local dateY = 38
     local iconY = 54
-    local skyY = 76
-    local badgeY = 86
-    local badgeW = isXlarge and 96 or 84
-    local badgeH = isXlarge and 32 or 30
-    local barTrackW = isXlarge and 74 or 64
-    local fontSize = isXlarge and 16.0 or 13.5
+    local pillY = 75
+    local pillH = isXlarge and 28 or 26
+    local maxPillW = isXlarge and 164 or 150
 
     for i, d in ipairs(dailyDays) do
         local x = xs[i]
@@ -467,29 +464,46 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         local iconSvg = shared.renderWeatherSvgIcon(d.glyph or "cloud", x, iconY)
         local rain = tonumber(d.rainProb) or 0
 
-        local bx = x - badgeW / 2
-        local dropScale = 0.8 + (rain / 100.0) * 0.45
-        local dropX = x - (isXlarge and 20 or 18) - (dropScale - 0.8) * 3
-        local dropY = badgeY + 5 - (dropScale - 0.8) * 2
-        local fillW = math.max(3.0, (rain / 100.0) * barTrackW)
-        local barX = x - barTrackW / 2
-        local barY = badgeY + (isXlarge and 22 or 20)
+        local pillW = math.min(colW - 12, maxPillW)
+        local pillX = x - pillW / 2
+        local rightW = isXlarge and 62 or 56
+        local dividerX = pillX + pillW - rightW
+        local leftCenter = (pillX + dividerX) / 2
+        local skyFontSize = (#skyClean > 13) and 11.0 or (isXlarge and 12.5 or 11.5)
+
+        local strokeColor = (rain > 0) and "#0284c7" or "#1e293b"
+        local dropX = dividerX + (isXlarge and 6 or 5)
+        local dropY = pillY + (isXlarge and 7.5 or 6.5)
+        local dropScale = 0.82 + (rain / 100.0) * 0.35
+        local textX = dropX + (isXlarge and 14 or 12)
+        local textY = pillY + (isXlarge and 18.5 or 17.5)
+        local rainFontSize = isXlarge and 13.5 or 12.5
+
+        local barW = pillW - 12
+        local barX = pillX + 6
+        local barY = pillY + pillH - 4.5
+        local fillW = math.max(rain > 0 and 2.5 or 0.0, (rain / 100.0) * barW)
 
         svgParts[#svgParts + 1] = string.format([[
     <text x="%.1f" y="%d" fill="%s" font-size="%d" font-weight="bold" text-anchor="middle">%s</text>
     <text x="%.1f" y="%d" fill="#94a3b8" font-size="%d" text-anchor="middle">%s</text>
     %s
-    <text x="%.1f" y="%d" fill="#cbd5e1" font-size="%.1f" font-weight="500" text-anchor="middle">%s</text>
-    <rect x="%.1f" y="%d" width="%d" height="%d" rx="8" fill="#0b1329" stroke="#38bdf8" stroke-width="1.2"/>
+    <rect x="%.1f" y="%d" width="%.1f" height="%d" rx="7" fill="#0b1329" stroke="%s" stroke-width="1.2"/>
+    <text x="%.1f" y="%.1f" fill="#e2e8f0" font-size="%.1f" font-weight="500" text-anchor="middle">%s</text>
+    <line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="#1e293b" stroke-width="1"/>
     <g transform="translate(%.1f, %.1f) scale(%.2f)">
       <path d="M 4 1 C 4 1, 1 5, 1 8 A 3 3 0 0 0 7 8 C 7 5, 4 1, 4 1 Z" fill="#38bdf8"/>
     </g>
-    <text x="%.1f" y="%d" fill="#ffffff" font-size="%.1f" font-weight="bold" text-anchor="middle">%d%%</text>
-    <rect x="%.1f" y="%d" width="%d" height="4" rx="2" fill="#1e293b"/>
-    <rect x="%.1f" y="%d" width="%.1f" height="4" rx="2" fill="url(#rainGaugeGrad)"/>
-]], x, dayY, dayColor, dayTitleSize, dayTitle, x, dateY, dateSubSize, dateSub, iconSvg, x, skyY, skyDescSize, skyClean,
-    bx, badgeY, badgeW, badgeH, dropX, dropY, dropScale, x + 8, badgeY + (isXlarge and 15 or 14), fontSize, rain,
-    barX, barY, barTrackW, barX, barY, fillW)
+    <text x="%.1f" y="%.1f" fill="#38bdf8" font-size="%.1f" font-weight="bold" text-anchor="start">%d%%</text>
+    <rect x="%.1f" y="%.1f" width="%.1f" height="2.5" rx="1.25" fill="#141c2c"/>
+    <rect x="%.1f" y="%.1f" width="%.1f" height="2.5" rx="1.25" fill="url(#rainGaugeGrad)"/>
+]], x, dayY, dayColor, dayTitleSize, dayTitle, x, dateY, dateSubSize, dateSub, iconSvg,
+    pillX, pillY, pillW, pillH, strokeColor,
+    leftCenter, pillY + 18, skyFontSize, skyClean,
+    dividerX, pillY + 4, dividerX, pillY + pillH - 7,
+    dropX, dropY, dropScale,
+    textX, textY, rainFontSize, rain,
+    barX, barY, barW, barX, barY, fillW)
     end
 
     -- Franxa inferior para o vento

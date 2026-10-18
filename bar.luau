@@ -155,6 +155,19 @@ function onClick()
     noctalia.togglePanel("miguelfm/meteogalicia:panel")
 end
 
+function onScroll(_axis: string?, steps: number?, _startsGesture: boolean?)
+    local s = steps or 0
+    local curOffset = tonumber(noctalia.state.get("hourly_offset")) or 0
+    local totalHourly = (weatherData and weatherData.hourly and #weatherData.hourly) or 48
+    local maxOffset = math.max(0, totalHourly - 12)
+    if s > 0 and curOffset < maxOffset then
+        noctalia.state.set("hourly_offset", curOffset + 1)
+    elseif s < 0 and curOffset > 0 then
+        noctalia.state.set("hourly_offset", curOffset - 1)
+    end
+end
+
 weatherData = noctalia.state.get("weather")
 weatherError = noctalia.state.get("weather_error")
 render()
+

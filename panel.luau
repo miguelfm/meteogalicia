@@ -217,7 +217,8 @@ end
 function onPrevHours()
     local curOffset = tonumber(noctalia.state.get("hourly_offset")) or 0
     if curOffset > 0 then
-        noctalia.state.set("hourly_offset", math.max(0, curOffset - 12))
+        local newOffset = (curOffset % 12 ~= 0) and (math.floor(curOffset / 12) * 12) or math.max(0, curOffset - 12)
+        noctalia.state.set("hourly_offset", newOffset)
         render()
     end
 end
@@ -225,9 +226,28 @@ end
 function onNextHours()
     local curOffset = tonumber(noctalia.state.get("hourly_offset")) or 0
     local totalHourly = (weather and weather.hourly and #weather.hourly) or 48
-    local maxOffset = math.max(0, math.floor((totalHourly - 1) / 12) * 12)
+    local maxOffset = math.max(0, totalHourly - 12)
     if curOffset < maxOffset then
-        noctalia.state.set("hourly_offset", math.min(maxOffset, curOffset + 12))
+        local newOffset = math.min(maxOffset, (math.floor(curOffset / 12) + 1) * 12)
+        noctalia.state.set("hourly_offset", newOffset)
+        render()
+    end
+end
+
+function onStepPrevHour()
+    local curOffset = tonumber(noctalia.state.get("hourly_offset")) or 0
+    if curOffset > 0 then
+        noctalia.state.set("hourly_offset", curOffset - 1)
+        render()
+    end
+end
+
+function onStepNextHour()
+    local curOffset = tonumber(noctalia.state.get("hourly_offset")) or 0
+    local totalHourly = (weather and weather.hourly and #weather.hourly) or 48
+    local maxOffset = math.max(0, totalHourly - 12)
+    if curOffset < maxOffset then
+        noctalia.state.set("hourly_offset", curOffset + 1)
         render()
     end
 end
@@ -240,9 +260,9 @@ function onBlockHours4() noctalia.state.set("hourly_offset", 36); render() end
 function onScroll(_axis: string?, steps: number?, _startsGesture: boolean?)
     local s = steps or 0
     if s > 0 then
-        onNextHours()
+        onStepNextHour()
     elseif s < 0 then
-        onPrevHours()
+        onStepPrevHour()
     end
 end
 
@@ -268,8 +288,12 @@ function onKey(chord: string?, pressed: boolean)
     elseif lower == "s" or lower == "c" then
         onOpenSettings()
     elseif lower == "left" or lower == "arrowleft" or lower == "[" then
-        onPrevHours()
+        onStepPrevHour()
     elseif lower == "right" or lower == "arrowright" or lower == "]" then
+        onStepNextHour()
+    elseif lower == "pageup" then
+        onPrevHours()
+    elseif lower == "pagedown" then
         onNextHours()
     end
 end
@@ -474,7 +498,7 @@ render = function()
     local hourlyOffset = tonumber(noctalia.state.get("hourly_offset")) or 0
     local totalHourly = math.min(hoursLimit, #hourly)
     local numBlocks = math.max(1, math.ceil(totalHourly / 12))
-    local maxOffset = math.max(0, (numBlocks - 1) * 12)
+    local maxOffset = math.max(0, totalHourly - 12)
     if hourlyOffset > maxOffset then
         hourlyOffset = maxOffset
     end
@@ -521,12 +545,14 @@ render = function()
         local bStart = bOffset + 1
         local bEnd = math.min(bOffset + 12, totalHourly)
         local bLabel = string.format("%d–%d h", bStart, bEnd)
-        local isSelected = (hourlyOffset == bOffset)
+        local isExact = (hourlyOffset == bOffset)
+        local isInBlock = (hourlyOffset >= bOffset and (b == numBlocks or hourlyOffset < bOffset + 12))
+        local btnVariant = isExact and "primary" or (isInBlock and "outline" or "ghost")
         local handler = "onBlockHours" .. tostring(b)
 
         navButtons[#navButtons + 1] = ui.button({
             text = bLabel,
-            variant = (isSelected and "primary" or "ghost"),
+            variant = btnVariant,
             controlSize = "sm",
             onClick = handler,
             tooltip = string.format(tr("ui.hours_block_tooltip", "Ver horas %d a %d"), bStart, bEnd),
