@@ -1,0 +1,5 @@
+*.orig
+*.bak
+*~
+.DS_Store
+.luau-analyze-cache

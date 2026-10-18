@@ -1,0 +1,87 @@
+id = "miguelfm/meteogalicia"
+name = "MeteoGalicia"
+version = "1.0.0"
+plugin_api = 22
+author = "miguelfm"
+license = "MIT"
+icon = "cloud-rain"
+description = "Predición meteorolóxica oficial de Galicia por concellos (diaria e hora a hora) desde MeteoGalicia."
+tags = ["bar", "panel", "weather", "galicia", "indicator"]
+dependencies = []
+
+# ── Axustes do plugin ────────────────────────────────────────────────────────
+
+[[setting]]
+key = "concello_id"
+type = "int"
+label_key = "settings.concello_id.label"
+description_key = "settings.concello_id.description"
+default = 15035
+min = 10000
+max = 99999
+step = 1
+
+[[setting]]
+key = "concello_name"
+type = "string"
+label_key = "settings.concello_name.label"
+description_key = "settings.concello_name.description"
+default = "Fene"
+
+[[setting]]
+key = "refresh_minutes"
+type = "int"
+label_key = "settings.refresh_minutes.label"
+description_key = "settings.refresh_minutes.description"
+default = 30
+min = 5
+max = 180
+step = 5
+
+[[setting]]
+key = "show_town_name"
+type = "bool"
+label_key = "settings.show_town_name.label"
+description_key = "settings.show_town_name.description"
+default = true
+
+[[setting]]
+key = "show_rain_prob"
+type = "bool"
+label_key = "settings.show_rain_prob.label"
+description_key = "settings.show_rain_prob.description"
+default = true
+
+[[setting]]
+key = "hours_count"
+type = "int"
+label_key = "settings.hours_count.label"
+description_key = "settings.hours_count.description"
+default = 12
+min = 6
+max = 24
+step = 2
+
+# ── Entradas (Service, Widget, Panel) ─────────────────────────────────────────
+
+[[service]]
+id = "poller"
+entry = "service.luau"
+
+[[widget]]
+id = "bar"
+entry = "bar.luau"
+
+  [widget.actions]
+  right = "plugin miguelfm/meteogalicia:poller refresh"
+
+[[panel]]
+id = "panel"
+entry = "panel.luau"
+width = 820
+height = 560
+placement = "attached"
+position = "auto"
+open_near_click = true
+dismiss_on_outside_click = true
+capture_keys = ["escape", "r"]

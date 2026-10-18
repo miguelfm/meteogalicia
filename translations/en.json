@@ -1,0 +1,14 @@
+{
+  "settings.concello_id.label": "Municipality code (INE)",
+  "settings.concello_id.description": "INE municipality code (e.g. 15035 for Fene, 15036 for Ferrol, 15030 for A Coruña, 15078 for Santiago, 36057 for Vigo).",
+  "settings.concello_name.label": "Town display name",
+  "settings.concello_name.description": "Custom name to show on the bar and panel (e.g. Fene).",
+  "settings.refresh_minutes.label": "Update interval (minutes)",
+  "settings.refresh_minutes.description": "How often to refresh forecast data from MeteoGalicia (default: 30 minutes).",
+  "settings.show_town_name.label": "Show town name on bar",
+  "settings.show_town_name.description": "Displays the municipality name next to the temperature.",
+  "settings.show_rain_prob.label": "Show rain probability",
+  "settings.show_rain_prob.description": "Displays precipitation chance on the bar when greater than 0%.",
+  "settings.hours_count.label": "Hourly forecast entries",
+  "settings.hours_count.description": "Number of upcoming hourly cards to display in the panel (6 to 24 hours)."
+}
