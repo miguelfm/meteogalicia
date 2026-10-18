@@ -69,6 +69,30 @@ label_key = "settings.show_daily_summary.label"
 description_key = "settings.show_daily_summary.description"
 default = true
 
+[[setting]]
+key = "ui_scale"
+type = "select"
+label_key = "settings.ui_scale.label"
+description_key = "settings.ui_scale.description"
+default = "large"
+options = [
+  { value = "normal", label_key = "settings.ui_scale.option.normal" },
+  { value = "large", label_key = "settings.ui_scale.option.large" },
+  { value = "xlarge", label_key = "settings.ui_scale.option.xlarge" },
+]
+
+[[setting]]
+key = "panel_opacity"
+type = "select"
+label_key = "settings.panel_opacity.label"
+description_key = "settings.panel_opacity.description"
+default = "opaque"
+options = [
+  { value = "opaque", label_key = "settings.panel_opacity.option.opaque" },
+  { value = "subtle", label_key = "settings.panel_opacity.option.subtle" },
+  { value = "glass", label_key = "settings.panel_opacity.option.glass" },
+]
+
 # ── Entradas (Service, Widget, Panel) ─────────────────────────────────────────
 
 [[service]]
@@ -85,8 +109,8 @@ entry = "bar.luau"
 [[panel]]
 id = "panel"
 entry = "panel.luau"
-width = 820
-height = 660
+width = 980
+height = 740
 placement = "attached"
 position = "auto"
 open_near_click = true

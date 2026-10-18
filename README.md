@@ -58,6 +58,8 @@ O plugin permite configurar os seguintes parámetros no panel de configuración 
 | `show_rain_prob` | `bool` | `true` | Amosa a probabilidade de choiva se é maior do 0%. |
 | `hours_count` | `int` | `12` | Número de tarxetas horarias a amosar no panel (de 6 a 24). |
 | `show_daily_summary` | `bool` | `true` | Amosa as tarxetas do resumo dos vindeiros días debaixo da información horaria. |
+| `ui_scale` | `select` | `large` | Escala xeral do panel, tipografía e iconas (`normal`, `large`, `xlarge`) para pantallas HiDPI / 4K. |
+| `panel_opacity` | `select` | `opaque` | Nivel de opacidade do fondo (`opaque`, `subtle`, `glass`) para mellorar a lexibilidade. |
 
 ---
 
