@@ -102,7 +102,7 @@ local SCALES: { [string]: ScaleConfig } = {
         dailyRainText = 11,
         dailyWindText = 10,
         chartWidth = 720,
-        chartHeight = 310,
+        chartHeight = 250,
         commentTitle = 13,
         commentText = 12,
         commentPad = 12,
@@ -151,7 +151,7 @@ local SCALES: { [string]: ScaleConfig } = {
         dailyRainText = 13,
         dailyWindText = 11,
         chartWidth = 940,
-        chartHeight = 330,
+        chartHeight = 270,
         commentTitle = 15,
         commentText = 14,
         commentPad = 14,
@@ -200,7 +200,7 @@ local SCALES: { [string]: ScaleConfig } = {
         dailyRainText = 16,
         dailyWindText = 14,
         chartWidth = 1260,
-        chartHeight = 350,
+        chartHeight = 290,
         commentTitle = 20,
         commentText = 17,
         commentPad = 16,
@@ -457,12 +457,35 @@ render = function()
     -- ── 2. PRESTRIP / TIRA HORARIA ────────────────────────────────────────────
     local hourlyOffset = tonumber(noctalia.state.get("hourly_offset")) or 0
     local totalHourly = math.min(hoursLimit, #hourly)
-    if hourlyOffset >= totalHourly then hourlyOffset = 0 end
+    local isEn = (tr("ui.today", "Hoxe") == "Today")
+    local weekdaysShort = isEn and shared.WEEKDAYS_SHORT_EN or shared.WEEKDAYS_SHORT_GL
+    local weekdaysFull = isEn and shared.WEEKDAYS_EN or shared.WEEKDAYS_GL
+
+    local startIdx = hourlyOffset + 1
+    local endIdx = math.min(hourlyOffset + 12, totalHourly)
+
+    local startH = hourly[startIdx]
+    local endH = hourly[endIdx]
+    local daysCovered = ""
+    if startH and endH then
+        local w1 = weekdaysFull[startH.weekday] or (startH.isTomorrow and tr("ui.tomorrow", "Mañá") or tr("ui.today", "Hoxe"))
+        local w2 = weekdaysFull[endH.weekday] or (endH.isTomorrow and tr("ui.tomorrow", "Mañá") or tr("ui.today", "Hoxe"))
+        if w1 == w2 then
+            daysCovered = w1
+        else
+            daysCovered = w1 .. " → " .. w2
+        end
+    end
+
+    local subtitleText = string.format(tr("ui.upcoming_hours", "Próximas %d horas"), totalHourly)
+    if daysCovered ~= "" then
+        subtitleText = subtitleText .. " (" .. daysCovered .. ")"
+    end
 
     rootChildren[#rootChildren + 1] = ui.row({ gap = 8, align = "center" }, {
         ui.glyph({ name = "clock", size = s.sectionIcon, color = "primary" }),
         ui.label({ text = tr("ui.hourly_title", "Predición por horas"), fontSize = s.sectionTitle, fontWeight = "bold", color = "on_surface" }),
-        ui.label({ text = string.format(tr("ui.upcoming_hours", "Próximas %d horas"), totalHourly), fontSize = s.sectionSub, color = "on_surface_variant" }),
+        ui.label({ text = subtitleText, fontSize = s.sectionSub, color = "on_surface_variant" }),
         ui.spacer(),
         ui.row({ gap = 4, align = "center" }, {
             ui.button({
@@ -499,9 +522,6 @@ render = function()
     local hourCards = {}
     local currentHourSec = math.floor(os.time() / 3600) * 3600
 
-    local startIdx = hourlyOffset + 1
-    local endIdx = math.min(hourlyOffset + 12, totalHourly)
-
     for idx = startIdx, endIdx do
         local h = hourly[idx]
         if not h then break end
@@ -517,8 +537,9 @@ render = function()
             timeColor = "secondary"
         end
 
+        local wShort = weekdaysShort[h.weekday] or (h.isTomorrow and tr("ui.tomorrow", "Mañá") or tr("ui.today", "Hoxe"))
         local dayHint = h.isTomorrow and tr("ui.tomorrow", "Mañá") or tr("ui.today", "Hoxe")
-        local cardTooltip = dayHint .. " ás " .. (h.time or "--:--")
+        local cardTooltip = dayHint .. " (" .. (weekdaysFull[h.weekday] or "") .. ") ás " .. (h.time or "--:--")
 
         hourCards[#hourCards + 1] = ui.column({
             width = s.hourlyWidth,
@@ -532,6 +553,12 @@ render = function()
             borderWidth = 1,
             tooltip = cardTooltip,
         }, {
+            ui.label({
+                text = wShort,
+                fontSize = s.hourlyTime - 2,
+                fontWeight = "bold",
+                color = h.isTomorrow and "secondary" or "primary",
+            }),
             ui.label({
                 text = h.time or "--:--",
                 fontSize = s.hourlyTime,
@@ -566,29 +593,6 @@ render = function()
         justify = "center",
     }, hourCards)
 
-    -- Barra de desprazamento e posición discreta
-    rootChildren[#rootChildren + 1] = ui.row({
-        gap = 8,
-        align = "center",
-        justify = "center",
-        paddingV = 2,
-    }, {
-        ui.button({
-            text = (hourlyOffset == 0 and "●  1 – 12 h  (actual)" or "1 – 12 h"),
-            variant = (hourlyOffset == 0 and "outline" or "ghost"),
-            controlSize = "sm",
-            onClick = "onPrevHours",
-            tooltip = tr("ui.hours_first_12", "Ver primeiras 12 horas"),
-        }),
-        ui.button({
-            text = (hourlyOffset > 0 and "●  13 – 24 h  (actual)" or "13 – 24 h"),
-            variant = (hourlyOffset > 0 and "outline" or "ghost"),
-            controlSize = "sm",
-            onClick = "onNextHours",
-            tooltip = tr("ui.hours_next_12", "Ver seguintes 12 horas"),
-        }),
-    })
-
     -- ── 3. RESUMO DIARIO (VINDEIROS DÍAS) ────────────────────────────────────
     local showDailySummary = noctalia.getConfig("show_daily_summary")
     if showDailySummary == nil then showDailySummary = true end
@@ -602,9 +606,9 @@ render = function()
             ui.label({ text = tr("ui.daily_title", "Resumo dos vindeiros días"), fontSize = s.sectionTitle, fontWeight = "bold", color = "on_surface" }),
         })
 
-        local isEn = (tr("ui.today", "Hoxe") == "Today")
         local chartSvg = shared.generateDailyChartSvg(dailyDays, s.chartWidth, s.chartHeight, {
             isEn = isEn,
+            isXlarge = (s == SCALES["xlarge"]),
             todayLabel = tr("ui.today", "Hoxe"),
             tomorrowLabel = tr("ui.tomorrow", "Mañá"),
         })

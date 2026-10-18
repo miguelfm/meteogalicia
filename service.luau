@@ -234,14 +234,18 @@ local function poll()
                     local sec = math.floor(ms / 1000)
                     local hNum = tonumber(os.date("%H", sec)) or 0
                     local hTime = string.format("%02d:00", hNum)
-                    local itemDateStr = os.date("%Y-%m-%d", sec)
-                    local isTomorrow = (itemDateStr ~= todayDateStr)
+                    local wday = tonumber(os.date("%w", sec)) or 0
+                    local dayNum = tonumber(os.date("%d", sec)) or 0
+                    local monthNum = tonumber(os.date("%m", sec)) or 0
                     local sky = shared.getSky(h.idSkyTrend)
 
                     local item = {
                         time = hTime,
                         hourNum = hNum,
                         timestamp = sec,
+                        weekday = wday,
+                        day = dayNum,
+                        month = monthNum,
                         isTomorrow = isTomorrow,
                         temp = h.averageTemperature or 0,
                         rainProb = h.probabilityRain or 0,
