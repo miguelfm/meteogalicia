@@ -86,15 +86,17 @@ local function poll()
             return
         end
 
-        -- 2. Obter predición por horas para hoxe, mañá e pasado mañá (para garantir 24+ horas continuas)
+        -- 2. Obter predición por horas para hoxe, mañá, pasado mañá e seguinte (48+ horas continuas)
         local nowSec = os.time()
         local todayParam = os.date("!%Y-%m-%dT00%%3A00%%3A00.000Z", nowSec)
         local tomorrowParam = os.date("!%Y-%m-%dT00%%3A00%%3A00.000Z", nowSec + 86400)
         local dayAfterParam = os.date("!%Y-%m-%dT00%%3A00%%3A00.000Z", nowSec + 172800)
+        local day3Param = os.date("!%Y-%m-%dT00%%3A00%%3A00.000Z", nowSec + 259200)
 
         local hourlyTodayUrl = shared.BASE_API .. "concellos/predicion-horaria?idConcello=" .. tostring(concelloId) .. "&data=" .. todayParam .. "&idioma=gl"
         local hourlyTomorrowUrl = shared.BASE_API .. "concellos/predicion-horaria?idConcello=" .. tostring(concelloId) .. "&data=" .. tomorrowParam .. "&idioma=gl"
         local hourlyDayAfterUrl = shared.BASE_API .. "concellos/predicion-horaria?idConcello=" .. tostring(concelloId) .. "&data=" .. dayAfterParam .. "&idioma=gl"
+        local hourlyDay3Url = shared.BASE_API .. "concellos/predicion-horaria?idConcello=" .. tostring(concelloId) .. "&data=" .. day3Param .. "&idioma=gl"
 
         noctalia.http({
             url = hourlyTodayUrl,
@@ -127,19 +129,30 @@ local function poll()
                     hourlyDataTomorrow = noctalia.json.decode(hourlyTomorrowRes.body or "{}")
                 end
 
-                -- Obter horas de pasado mañá para cubrir as 24h cando se consulta pola noite
+                -- Obter horas de pasado mañá
                 noctalia.http({
                     url = hourlyDayAfterUrl,
                     method = "GET",
                     headers = headers,
                 }, function(hourlyDayAfterRes)
-                    inFlight = false
-                    noctalia.state.set("weather_loading", false)
-
                     local hourlyDataDayAfter = nil
                     if hourlyDayAfterRes and hourlyDayAfterRes.ok and hourlyDayAfterRes.status == 200 then
                         hourlyDataDayAfter = noctalia.json.decode(hourlyDayAfterRes.body or "{}")
                     end
+
+                    -- Obter horas do cuarto día para garantir 48 horas completas a calquera hora do día
+                    noctalia.http({
+                        url = hourlyDay3Url,
+                        method = "GET",
+                        headers = headers,
+                    }, function(hourlyDay3Res)
+                        inFlight = false
+                        noctalia.state.set("weather_loading", false)
+
+                        local hourlyDataDay3 = nil
+                        if hourlyDay3Res and hourlyDay3Res.ok and hourlyDay3Res.status == 200 then
+                            hourlyDataDay3 = noctalia.json.decode(hourlyDay3Res.body or "{}")
+                        end
 
                 -- Procesar datos diarios
                 local shortTermList = dailyData.forecastDataShortTerm or {}
@@ -209,10 +222,11 @@ local function poll()
                     }
                 end
 
-                -- Combinar horas de hoxe, mañá e pasado mañá
+                -- Combinar horas de hoxe, mañá, pasado mañá e cuarto día
                 local rawToday = (hourlyDataToday and hourlyDataToday.forecastDataTime) or {}
                 local rawTomorrow = (hourlyDataTomorrow and hourlyDataTomorrow.forecastDataTime) or {}
                 local rawDayAfter = (hourlyDataDayAfter and hourlyDataDayAfter.forecastDataTime) or {}
+                local rawDay3 = (hourlyDataDay3 and hourlyDataDay3.forecastDataTime) or {}
                 local combinedHours = {}
                 for _, h in ipairs(rawToday) do
                     combinedHours[#combinedHours + 1] = h
@@ -223,9 +237,13 @@ local function poll()
                 for _, h in ipairs(rawDayAfter) do
                     combinedHours[#combinedHours + 1] = h
                 end
+                for _, h in ipairs(rawDay3) do
+                    combinedHours[#combinedHours + 1] = h
+                end
 
                 local currentHourSec = math.floor(nowSec / 3600) * 3600
                 local todayDateStr = os.date("%Y-%m-%d", nowSec)
+                local tomorrowDateStr = os.date("%Y-%m-%d", nowSec + 86400)
                 local currentEntry = nil
                 local processedHours = {}
 
@@ -238,6 +256,8 @@ local function poll()
                     local dayNum = tonumber(os.date("%d", sec)) or 0
                     local monthNum = tonumber(os.date("%m", sec)) or 0
                     local sky = shared.getSky(h.idSkyTrend)
+                    local itemDateStr = os.date("%Y-%m-%d", sec)
+                    local isTomorrow = (itemDateStr == tomorrowDateStr)
 
                     local item = {
                         time = hTime,
@@ -246,6 +266,7 @@ local function poll()
                         weekday = wday,
                         day = dayNum,
                         month = monthNum,
+                        dateStr = itemDateStr,
                         isTomorrow = isTomorrow,
                         temp = h.averageTemperature or 0,
                         rainProb = h.probabilityRain or 0,
@@ -262,8 +283,8 @@ local function poll()
                         currentEntry = item
                     end
 
-                    -- Engadir horas dende a hora actual en adiante
-                    if sec >= currentHourSec then
+                    -- Engadir horas dende a hora actual en adiante (ata 48 horas)
+                    if sec >= currentHourSec and #processedHours < 48 then
                         processedHours[#processedHours + 1] = item
                     end
                 end
@@ -301,6 +322,7 @@ local function poll()
             end)
         end)
     end)
+end)
 end)
 end
 

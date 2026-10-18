@@ -57,10 +57,10 @@ key = "hours_count"
 type = "int"
 label_key = "settings.hours_count.label"
 description_key = "settings.hours_count.description"
-default = 24
-min = 6
-max = 24
-step = 2
+default = 48
+min = 12
+max = 48
+step = 12
 
 [[setting]]
 key = "show_daily_summary"

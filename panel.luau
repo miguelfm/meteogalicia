@@ -224,9 +224,25 @@ end
 
 function onNextHours()
     local curOffset = tonumber(noctalia.state.get("hourly_offset")) or 0
-    if curOffset < 12 then
-        noctalia.state.set("hourly_offset", 12)
+    local totalHourly = (weather and weather.hourly and #weather.hourly) or 48
+    local maxOffset = math.max(0, math.floor((totalHourly - 1) / 12) * 12)
+    if curOffset < maxOffset then
+        noctalia.state.set("hourly_offset", math.min(maxOffset, curOffset + 12))
         render()
+    end
+end
+
+function onBlockHours1() noctalia.state.set("hourly_offset", 0); render() end
+function onBlockHours2() noctalia.state.set("hourly_offset", 12); render() end
+function onBlockHours3() noctalia.state.set("hourly_offset", 24); render() end
+function onBlockHours4() noctalia.state.set("hourly_offset", 36); render() end
+
+function onScroll(_axis: string?, steps: number?, _startsGesture: boolean?)
+    local s = steps or 0
+    if s > 0 then
+        onNextHours()
+    elseif s < 0 then
+        onPrevHours()
     end
 end
 
@@ -337,7 +353,7 @@ render = function()
     local cur = weather.current
     local today = weather.today or {}
     local hourly = weather.hourly or {}
-    local hoursLimit = tonumber(noctalia.getConfig("hours_count")) or 24
+    local hoursLimit = tonumber(noctalia.getConfig("hours_count")) or 48
 
     local rootChildren = {}
 
@@ -454,12 +470,19 @@ render = function()
     rootChildren[#rootChildren + 1] = headerRow
     rootChildren[#rootChildren + 1] = ui.separator()
 
-    -- ── 2. PRESTRIP / TIRA HORARIA ────────────────────────────────────────────
+    -- ── 2. PREDICIÓN POR HORAS (ATA 48 HORAS) ────────────────────────────────
     local hourlyOffset = tonumber(noctalia.state.get("hourly_offset")) or 0
     local totalHourly = math.min(hoursLimit, #hourly)
+    local numBlocks = math.max(1, math.ceil(totalHourly / 12))
+    local maxOffset = math.max(0, (numBlocks - 1) * 12)
+    if hourlyOffset > maxOffset then
+        hourlyOffset = maxOffset
+    end
+
     local isEn = (tr("ui.today", "Hoxe") == "Today")
     local weekdaysShort = isEn and shared.WEEKDAYS_SHORT_EN or shared.WEEKDAYS_SHORT_GL
     local weekdaysFull = isEn and shared.WEEKDAYS_EN or shared.WEEKDAYS_GL
+    local monthsTable = isEn and shared.MONTHS_FULL_EN or shared.MONTHS_FULL_GL
 
     local startIdx = hourlyOffset + 1
     local endIdx = math.min(hourlyOffset + 12, totalHourly)
@@ -470,80 +493,153 @@ render = function()
     if startH and endH then
         local w1 = weekdaysFull[startH.weekday] or (startH.isTomorrow and tr("ui.tomorrow", "Mañá") or tr("ui.today", "Hoxe"))
         local w2 = weekdaysFull[endH.weekday] or (endH.isTomorrow and tr("ui.tomorrow", "Mañá") or tr("ui.today", "Hoxe"))
-        if w1 == w2 then
-            daysCovered = w1
+        local m1 = monthsTable[startH.month] or ""
+
+        if startH.day == endH.day then
+            if isEn then
+                daysCovered = string.format("%s, %s %d", w1, m1, startH.day)
+            else
+                daysCovered = string.format("%s, %d de %s", w1, startH.day, m1)
+            end
         else
-            daysCovered = w1 .. " → " .. w2
+            daysCovered = string.format("%s %d → %s %d", w1, startH.day, w2, endH.day)
         end
     end
 
-    local subtitleText = string.format(tr("ui.upcoming_hours", "Próximas %d horas"), totalHourly)
-    if daysCovered ~= "" then
-        subtitleText = subtitleText .. " (" .. daysCovered .. ")"
-    end
-
-    rootChildren[#rootChildren + 1] = ui.row({ gap = 8, align = "center" }, {
-        ui.glyph({ name = "clock", size = s.sectionIcon, color = "primary" }),
-        ui.label({ text = tr("ui.hourly_title", "Predición por horas"), fontSize = s.sectionTitle, fontWeight = "bold", color = "on_surface" }),
-        ui.label({ text = subtitleText, fontSize = s.sectionSub, color = "on_surface_variant" }),
-        ui.spacer(),
-        ui.row({ gap = 4, align = "center" }, {
-            ui.button({
-                glyph = "chevron-left",
-                variant = (hourlyOffset > 0 and "outline" or "ghost"),
-                controlSize = "sm",
-                onClick = "onPrevHours",
-                tooltip = tr("ui.hours_first_12", "Ver primeiras 12 horas"),
-            }),
-            ui.button({
-                text = "1–12 h",
-                variant = (hourlyOffset == 0 and "primary" or "ghost"),
-                controlSize = "sm",
-                onClick = "onPrevHours",
-                tooltip = tr("ui.hours_first_12", "Ver primeiras 12 horas"),
-            }),
-            ui.button({
-                text = "13–24 h",
-                variant = (hourlyOffset > 0 and "primary" or "ghost"),
-                controlSize = "sm",
-                onClick = "onNextHours",
-                tooltip = tr("ui.hours_next_12", "Ver seguintes 12 horas"),
-            }),
-            ui.button({
-                glyph = "chevron-right",
-                variant = (hourlyOffset == 0 and "outline" or "ghost"),
-                controlSize = "sm",
-                onClick = "onNextHours",
-                tooltip = tr("ui.hours_next_12", "Ver seguintes 12 horas"),
-            }),
-        }),
+    -- Controis de navegación da predición horaria (paxinación en bloques de 12h ata 48h)
+    local navButtons = {}
+    navButtons[#navButtons + 1] = ui.button({
+        glyph = "chevron-left",
+        variant = (hourlyOffset > 0 and "outline" or "ghost"),
+        controlSize = "sm",
+        onClick = "onPrevHours",
+        tooltip = tr("ui.hours_prev", "Ver 12 horas anteriores"),
     })
 
+    for b = 1, numBlocks do
+        local bOffset = (b - 1) * 12
+        local bStart = bOffset + 1
+        local bEnd = math.min(bOffset + 12, totalHourly)
+        local bLabel = string.format("%d–%d h", bStart, bEnd)
+        local isSelected = (hourlyOffset == bOffset)
+        local handler = "onBlockHours" .. tostring(b)
+
+        navButtons[#navButtons + 1] = ui.button({
+            text = bLabel,
+            variant = (isSelected and "primary" or "ghost"),
+            controlSize = "sm",
+            onClick = handler,
+            tooltip = string.format(tr("ui.hours_block_tooltip", "Ver horas %d a %d"), bStart, bEnd),
+        })
+    end
+
+    navButtons[#navButtons + 1] = ui.button({
+        glyph = "chevron-right",
+        variant = (hourlyOffset < maxOffset and "outline" or "ghost"),
+        controlSize = "sm",
+        onClick = "onNextHours",
+        tooltip = tr("ui.hours_next", "Ver seguintes 12 horas"),
+    })
+
+    rootChildren[#rootChildren + 1] = ui.row({ gap = 8, align = "center" }, {
+        -- Esquerda: Título da sección
+        ui.row({ gap = 6, align = "center" }, {
+            ui.glyph({ name = "clock", size = s.sectionIcon, color = "primary" }),
+            ui.label({ text = tr("ui.hourly_title", "Por horas"), fontSize = s.sectionTitle, fontWeight = "bold", color = "on_surface" }),
+        }),
+
+        -- Espazador que empuxa o día cara o centro
+        ui.spacer(),
+
+        -- Centro: Día ou intervalo de días amosado (centrado e sen parénteses)
+        ui.row({
+            paddingH = 14,
+            paddingV = 4,
+            radius = 8,
+            fill = "surface_variant/0.50",
+            border = "outline/0.25",
+            borderWidth = 1,
+            align = "center",
+            gap = 6,
+        }, {
+            ui.glyph({ name = "calendar", size = s.sectionSub + 1, color = "primary" }),
+            ui.label({
+                text = daysCovered,
+                fontSize = s.sectionSub + 1,
+                fontWeight = "bold",
+                color = "on_surface",
+            }),
+        }),
+
+        -- Espazador que empuxa os botóns cara a dereita
+        ui.spacer(),
+
+        -- Dereita: Controis de scroll / paxinación
+        ui.row({ gap = 4, align = "center" }, navButtons),
+    })
+
+    -- Tarxetas horarias con separador visual no cambio de día
     local hourCards = {}
     local currentHourSec = math.floor(os.time() / 3600) * 3600
+
+    -- Comprobar se hai cambio de día dentro do tramo visible
+    local hasDayChange = false
+    for idx = startIdx + 1, endIdx do
+        local h = hourly[idx]
+        local prev = hourly[idx - 1]
+        if h and prev and h.day ~= prev.day then
+            hasDayChange = true
+            break
+        end
+    end
+
+    -- Axuste da anchura de cada tarxeta para manter exactamente a grella de 1214px
+    local effectiveCardWidth = hasDayChange and (s.hourlyWidth - 2) or s.hourlyWidth
 
     for idx = startIdx, endIdx do
         local h = hourly[idx]
         if not h then break end
 
-        local isCurrent = (h.timestamp == currentHourSec) or (idx == 1 and not h.isTomorrow)
+        -- Se hai cambio de día respecto á hora anterior, inserimos un separador discreto
+        if idx > startIdx then
+            local prevH = hourly[idx - 1]
+            if prevH and h.day ~= prevH.day then
+                local nextDayName = weekdaysFull[h.weekday] or ""
+                local sepTooltip = string.format(tr("ui.day_change_hint", "Cambio de día: %s %d"), nextDayName, h.day)
+                local lineH = math.floor(s.hourlyGlyph * 1.1)
+                hourCards[#hourCards + 1] = ui.column({
+                    width = 14,
+                    align = "center",
+                    justify = "center",
+                    gap = 6,
+                    paddingV = 6,
+                    tooltip = sepTooltip,
+                }, {
+                    ui.box({ width = 2, height = lineH, fill = "secondary/0.45", radius = 1 }),
+                    ui.glyph({ name = "calendar", size = 12, color = "secondary" }),
+                    ui.box({ width = 2, height = lineH, fill = "secondary/0.45", radius = 1 }),
+                })
+            end
+        end
+
+        local isCurrent = (h.timestamp == currentHourSec) or (idx == 1 and hourlyOffset == 0)
+        local isStartOfDay = (h.hourNum == 0)
         local cardBg = isCurrent and cardBgActive or cardBgNorm
-        local cardBorder = isCurrent and "primary/0.60" or "outline/0.25"
+        local cardBorder = isCurrent and "primary/0.60" or (isStartOfDay and "secondary/0.40" or "outline/0.25")
 
         local timeColor = "on_surface_variant"
         if isCurrent then
             timeColor = "primary"
-        elseif h.isTomorrow then
+        elseif isStartOfDay then
             timeColor = "secondary"
         end
 
-        local wShort = weekdaysShort[h.weekday] or (h.isTomorrow and tr("ui.tomorrow", "Mañá") or tr("ui.today", "Hoxe"))
-        local dayHint = h.isTomorrow and tr("ui.tomorrow", "Mañá") or tr("ui.today", "Hoxe")
-        local cardTooltip = dayHint .. " (" .. (weekdaysFull[h.weekday] or "") .. ") ás " .. (h.time or "--:--")
+        local dayName = weekdaysFull[h.weekday] or ""
+        local cardTooltip = dayName .. ", " .. tostring(h.day) .. " ás " .. (h.time or "--:--") .. " · " .. (h.skyDesc or "") .. " · " .. tostring(h.temp or 0) .. "°C"
 
         hourCards[#hourCards + 1] = ui.column({
-            width = s.hourlyWidth,
-            minWidth = s.hourlyWidth,
+            width = effectiveCardWidth,
+            minWidth = effectiveCardWidth,
             gap = s.hourlyGap,
             align = "center",
             padding = s.hourlyPad,
@@ -554,15 +650,9 @@ render = function()
             tooltip = cardTooltip,
         }, {
             ui.label({
-                text = wShort,
-                fontSize = s.hourlyTime - 2,
-                fontWeight = "bold",
-                color = h.isTomorrow and "secondary" or "primary",
-            }),
-            ui.label({
                 text = h.time or "--:--",
                 fontSize = s.hourlyTime,
-                fontWeight = (isCurrent or h.isTomorrow) and "bold" or "normal",
+                fontWeight = (isCurrent or isStartOfDay) and "bold" or "normal",
                 color = timeColor,
             }),
             ui.glyph({
