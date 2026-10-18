@@ -280,21 +280,28 @@ end
 
 function onKey(chord: string?, pressed: boolean)
     if not pressed then return end
-    local lower = tostring(chord or ""):lower()
-    if lower == "escape" then
+    local raw = tostring(chord or "")
+    local lower = raw:lower()
+    local cleanKey = lower:gsub("[_%s%-]", "")
+
+    if cleanKey == "escape" then
         if type(panel.close) == "function" then panel.close() end
-    elseif lower == "r" then
+    elseif cleanKey == "r" then
         onRefresh()
-    elseif lower == "s" or lower == "c" then
+    elseif cleanKey == "s" or cleanKey == "c" then
         onOpenSettings()
-    elseif lower == "left" or lower == "arrowleft" or lower == "[" then
+    elseif cleanKey == "left" or cleanKey == "arrowleft" or cleanKey == "[" or cleanKey == "bracketleft" or cleanKey:find("%+left$") ~= nil then
         onStepPrevHour()
-    elseif lower == "right" or lower == "arrowright" or lower == "]" then
+    elseif cleanKey == "right" or cleanKey == "arrowright" or cleanKey == "]" or cleanKey == "bracketright" or cleanKey:find("%+right$") ~= nil then
         onStepNextHour()
-    elseif lower == "pageup" or lower == "page_up" or lower == "prior" then
+    elseif cleanKey == "pageup" or cleanKey == "prior" or cleanKey:find("pageup$") ~= nil or cleanKey:find("prior$") ~= nil then
         onPrevHours()
-    elseif lower == "pagedown" or lower == "page_down" or lower == "next" then
+    elseif cleanKey == "pagedown" or cleanKey == "next" or cleanKey:find("pagedown$") ~= nil or cleanKey:find("next$") ~= nil then
         onNextHours()
+    elseif cleanKey == "home" or cleanKey:find("home$") ~= nil then
+        onBlockHours1()
+    elseif cleanKey == "end" or cleanKey:find("end$") ~= nil then
+        onBlockHours4()
     end
 end
 

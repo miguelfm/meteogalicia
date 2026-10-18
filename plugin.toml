@@ -115,4 +115,19 @@ placement = "attached"
 position = "auto"
 open_near_click = true
 dismiss_on_outside_click = true
-capture_keys = ["escape", "r", "s", "c", "left", "right"]
+capture_keys = [
+  "escape",
+  "r",
+  "s",
+  "c",
+  "left",
+  "right",
+  "Page_Up",
+  "Page_Down",
+  "Prior",
+  "Next",
+  "Home",
+  "End",
+  "bracketleft",
+  "bracketright",
+]
