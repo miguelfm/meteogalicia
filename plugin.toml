@@ -57,7 +57,7 @@ key = "hours_count"
 type = "int"
 label_key = "settings.hours_count.label"
 description_key = "settings.hours_count.description"
-default = 12
+default = 24
 min = 6
 max = 24
 step = 2
@@ -68,18 +68,6 @@ type = "bool"
 label_key = "settings.show_daily_summary.label"
 description_key = "settings.show_daily_summary.description"
 default = true
-
-[[setting]]
-key = "daily_view"
-type = "select"
-label_key = "settings.daily_view.label"
-description_key = "settings.daily_view.description"
-default = "both"
-options = [
-  { value = "both", label_key = "settings.daily_view.option.both" },
-  { value = "chart", label_key = "settings.daily_view.option.chart" },
-  { value = "cards", label_key = "settings.daily_view.option.cards" },
-]
 
 [[setting]]
 key = "ui_scale"

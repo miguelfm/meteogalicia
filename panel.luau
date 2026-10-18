@@ -101,7 +101,7 @@ local SCALES: { [string]: ScaleConfig } = {
         dailyRainText = 11,
         dailyWindText = 10,
         chartWidth = 720,
-        chartHeight = 230,
+        chartHeight = 310,
         commentTitle = 13,
         commentText = 12,
         commentPad = 12,
@@ -150,7 +150,7 @@ local SCALES: { [string]: ScaleConfig } = {
         dailyRainText = 13,
         dailyWindText = 11,
         chartWidth = 940,
-        chartHeight = 260,
+        chartHeight = 330,
         commentTitle = 15,
         commentText = 14,
         commentPad = 14,
@@ -199,7 +199,7 @@ local SCALES: { [string]: ScaleConfig } = {
         dailyRainText = 16,
         dailyWindText = 14,
         chartWidth = 1260,
-        chartHeight = 290,
+        chartHeight = 350,
         commentTitle = 20,
         commentText = 17,
         commentPad = 16,
@@ -211,20 +211,6 @@ local SCALES: { [string]: ScaleConfig } = {
 
 function onRefresh()
     noctalia.state.set("weather_request_refresh", true)
-end
-
-function onToggleDailyView()
-    local current = noctalia.state.get("daily_view") or noctalia.getConfig("daily_view") or "both"
-    local nextView = "both"
-    if current == "both" then
-        nextView = "chart"
-    elseif current == "chart" then
-        nextView = "cards"
-    else
-        nextView = "both"
-    end
-    noctalia.state.set("daily_view", nextView)
-    render()
 end
 
 function onOpenWeb()
@@ -330,7 +316,7 @@ local function render()
     local cur = weather.current
     local today = weather.today or {}
     local hourly = weather.hourly or {}
-    local hoursLimit = tonumber(noctalia.getConfig("hours_count")) or 12
+    local hoursLimit = tonumber(noctalia.getConfig("hours_count")) or 24
 
     local rootChildren = {}
 
@@ -452,7 +438,7 @@ local function render()
         ui.glyph({ name = "clock", size = s.sectionIcon, color = "primary" }),
         ui.label({ text = tr("ui.hourly_title", "Predición por horas"), fontSize = s.sectionTitle, fontWeight = "bold", color = "on_surface" }),
         ui.spacer(),
-        ui.label({ text = string.format(tr("ui.upcoming_hours", "Próximas %d horas"), math.min(hoursLimit, #hourly)), fontSize = s.sectionSub, color = "on_surface_variant" }),
+        ui.label({ text = string.format(tr("ui.upcoming_hours_scroll", "Próximas %d horas (desprazable)"), math.min(hoursLimit, #hourly)), fontSize = s.sectionSub, color = "on_surface_variant" }),
     })
 
     local hourCards = {}
@@ -476,7 +462,8 @@ local function render()
         local cardTooltip = dayHint .. " ás " .. (h.time or "--:--")
 
         hourCards[#hourCards + 1] = ui.column({
-            flexGrow = 1,
+            width = s.hourlyWidth,
+            minWidth = s.hourlyWidth,
             gap = s.hourlyGap,
             align = "center",
             padding = s.hourlyPad,
@@ -514,7 +501,12 @@ local function render()
         })
     end
 
-    rootChildren[#rootChildren + 1] = ui.row({ gap = s.hourlyRowGap, align = "center" }, hourCards)
+    rootChildren[#rootChildren + 1] = ui.scroll({
+        width = s.chartWidth,
+        paddingV = 2,
+    }, {
+        ui.row({ gap = s.hourlyRowGap, align = "center" }, hourCards)
+    })
 
     -- ── 3. RESUMO DIARIO (VINDEIROS DÍAS) ────────────────────────────────────
     local showDailySummary = noctalia.getConfig("show_daily_summary")
@@ -524,161 +516,25 @@ local function render()
     if showDailySummary and #dailyDays > 0 then
         rootChildren[#rootChildren + 1] = ui.separator()
 
-        local currentDailyView = noctalia.state.get("daily_view")
-        if currentDailyView == nil then
-            currentDailyView = noctalia.getConfig("daily_view") or "both"
-        end
-
-        local viewLabels = {
-            both = tr("ui.view_both", "Ambos"),
-            chart = tr("ui.view_chart", "Gráfico"),
-            cards = tr("ui.view_cards", "Tarxetas"),
-        }
-        local viewGlyphs = {
-            both = "layout-grid",
-            chart = "chart-line",
-            cards = "cards",
-        }
-
         rootChildren[#rootChildren + 1] = ui.row({ gap = 6, align = "center" }, {
             ui.glyph({ name = "calendar", size = s.sectionIcon, color = "primary" }),
             ui.label({ text = tr("ui.daily_title", "Resumo dos vindeiros días"), fontSize = s.sectionTitle, fontWeight = "bold", color = "on_surface" }),
-            ui.spacer(),
-            ui.button({
-                text = viewLabels[currentDailyView] or "Ambos",
-                glyph = viewGlyphs[currentDailyView] or "layout-grid",
-                variant = "ghost",
-                controlSize = s.btnSize,
-                tooltip = tr("ui.view_toggle_tooltip", "Cambiar visualización: Gráfico, Tarxetas ou Ambos"),
-                onClick = "onToggleDailyView",
-            }),
         })
 
         local isEn = (tr("ui.today", "Hoxe") == "Today")
-        local weekdaysTable = isEn and shared.WEEKDAYS_EN or shared.WEEKDAYS_GL
-        local monthsTable = isEn and shared.MONTHS_EN or shared.MONTHS_GL
+        local chartSvg = shared.generateDailyChartSvg(dailyDays, s.chartWidth, s.chartHeight, {
+            isEn = isEn,
+            todayLabel = tr("ui.today", "Hoxe"),
+            tomorrowLabel = tr("ui.tomorrow", "Mañá"),
+        })
+        local chartPath = "/tmp/meteogalicia_daily_trend.svg"
+        noctalia.writeFile(chartPath, chartSvg)
 
-        -- 3.1 Gráfico suavizado de tendencias (se o modo é 'chart' ou 'both')
-        if currentDailyView == "chart" or currentDailyView == "both" then
-            local chartSvg = shared.generateDailyChartSvg(dailyDays, s.chartWidth, s.chartHeight, {
-                isEn = isEn,
-                todayLabel = tr("ui.today", "Hoxe"),
-                tomorrowLabel = tr("ui.tomorrow", "Mañá"),
-            })
-            local chartPath = "/tmp/meteogalicia_daily_trend.svg"
-            noctalia.writeFile(chartPath, chartSvg)
-
-            rootChildren[#rootChildren + 1] = ui.image({
-                path = chartPath,
-                width = s.chartWidth,
-                height = s.chartHeight,
-            })
-        end
-
-        -- 3.2 Tarxetas diarias tradicionais (se o modo é 'cards' ou 'both')
-        if currentDailyView == "cards" or currentDailyView == "both" then
-            local dayCards = {}
-            for _, d in ipairs(dailyDays) do
-                local isToday = (d.reach == 0)
-                local dayTitle = "Hoxe"
-                if d.reach == 0 then
-                    dayTitle = tr("ui.today", "Hoxe")
-                elseif d.reach == 1 then
-                    dayTitle = tr("ui.tomorrow", "Mañá")
-                else
-                    dayTitle = weekdaysTable[d.weekday] or ("Día " .. tostring(d.reach))
-                end
-
-                local dateSub = ""
-                if d.day and d.day > 0 and d.month and d.month > 0 then
-                    dateSub = string.format("%d %s", d.day, monthsTable[d.month] or "")
-                end
-
-                local cardBg = isToday and cardBgActive or cardBgNorm
-                local cardBorder = isToday and "primary/0.60" or "outline/0.25"
-
-                local titleChildren = {
-                    ui.label({
-                        text = dayTitle,
-                        fontSize = s.dailyTitle,
-                        fontWeight = "bold",
-                        color = isToday and "primary" or "on_surface",
-                    }),
-                }
-                if dateSub ~= "" then
-                    titleChildren[#titleChildren + 1] = ui.label({
-                        text = dateSub,
-                        fontSize = s.dailyDate,
-                        color = "on_surface_variant",
-                    })
-                end
-
-                local metaChildren = {
-                    ui.glyph({ name = "droplet", size = s.dailyRainIcon, color = "secondary" }),
-                    ui.label({
-                        text = tostring(d.rainProb or 0) .. "%",
-                        fontSize = s.dailyRainText,
-                        fontWeight = "bold",
-                        color = "secondary",
-                    }),
-                }
-
-                if d.windDesc and d.windDesc ~= "" then
-                    metaChildren[#metaChildren + 1] = ui.glyph({
-                        name = "wind",
-                        size = s.dailyRainIcon,
-                        color = "on_surface_variant",
-                    })
-                    metaChildren[#metaChildren + 1] = ui.label({
-                        text = d.windDesc,
-                        fontSize = s.dailyWindText,
-                        color = "on_surface_variant",
-                        maxLines = 1,
-                    })
-                end
-
-                dayCards[#dayCards + 1] = ui.column({
-                    flexGrow = 1,
-                    gap = s.dailyGap,
-                    align = "center",
-                    padding = s.dailyPad,
-                    radius = 8,
-                    fill = cardBg,
-                    border = cardBorder,
-                    borderWidth = 1,
-                }, {
-                    ui.row({ gap = 4, align = "center" }, titleChildren),
-                    ui.glyph({
-                        name = d.glyph or "cloud",
-                        size = s.dailyGlyph,
-                        color = d.color or "primary",
-                    }),
-                    ui.label({
-                        text = d.skyDesc or "",
-                        fontSize = s.dailyDesc,
-                        color = "on_surface",
-                        maxLines = 1,
-                    }),
-                    ui.row({ gap = 8, align = "center" }, {
-                        ui.label({
-                            text = "↓ " .. tostring(d.tempMin or 0) .. "°",
-                            fontSize = s.dailyTemp,
-                            fontWeight = "bold",
-                            color = "secondary",
-                        }),
-                        ui.label({
-                            text = "↑ " .. tostring(d.tempMax or 0) .. "°",
-                            fontSize = s.dailyTemp,
-                            fontWeight = "bold",
-                            color = "error",
-                        }),
-                    }),
-                    ui.row({ gap = 4, align = "center" }, metaChildren),
-                })
-            end
-
-            rootChildren[#rootChildren + 1] = ui.row({ gap = s.hourlyRowGap, align = "center" }, dayCards)
-        end
+        rootChildren[#rootChildren + 1] = ui.image({
+            path = chartPath,
+            width = s.chartWidth,
+            height = s.chartHeight,
+        })
     end
 
     -- ── 4. COMENTARIO OFICIAL DE METEOGALICIA ─────────────────────────────────
