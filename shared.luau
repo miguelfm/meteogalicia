@@ -85,4 +85,36 @@ function shared.cleanHtml(text: string?): string
     return (clean:gsub("^%s+", ""):gsub("%s+$", ""))
 end
 
+shared.WEEKDAYS_GL = {
+    [0] = "Domingo",
+    [1] = "Luns",
+    [2] = "Martes",
+    [3] = "Mércores",
+    [4] = "Xoves",
+    [5] = "Venres",
+    [6] = "Sábado",
+}
+
+shared.WEEKDAYS_EN = {
+    [0] = "Sunday",
+    [1] = "Monday",
+    [2] = "Tuesday",
+    [3] = "Wednesday",
+    [4] = "Thursday",
+    [5] = "Friday",
+    [6] = "Saturday",
+}
+
+shared.MONTHS_GL = {
+    [1] = "xan", [2] = "feb", [3] = "mar", [4] = "abr",
+    [5] = "mai", [6] = "xuñ", [7] = "xul", [8] = "ago",
+    [9] = "set", [10] = "out", [11] = "nov", [12] = "dec",
+}
+
+shared.MONTHS_EN = {
+    [1] = "Jan", [2] = "Feb", [3] = "Mar", [4] = "Apr",
+    [5] = "May", [6] = "Jun", [7] = "Jul", [8] = "Aug",
+    [9] = "Sep", [10] = "Oct", [11] = "Nov", [12] = "Dec",
+}
+
 return shared

@@ -62,6 +62,13 @@ min = 6
 max = 24
 step = 2
 
+[[setting]]
+key = "show_daily_summary"
+type = "bool"
+label_key = "settings.show_daily_summary.label"
+description_key = "settings.show_daily_summary.description"
+default = true
+
 # ── Entradas (Service, Widget, Panel) ─────────────────────────────────────────
 
 [[service]]
@@ -79,7 +86,7 @@ entry = "bar.luau"
 id = "panel"
 entry = "panel.luau"
 width = 820
-height = 560
+height = 660
 placement = "attached"
 position = "auto"
 open_near_click = true

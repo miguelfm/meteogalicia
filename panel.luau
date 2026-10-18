@@ -28,19 +28,29 @@ function onKey(chord: string?, pressed: boolean)
     end
 end
 
+local function tr(key: string, fallback: string): string
+    if type(noctalia.tr) == "function" then
+        local val = noctalia.tr(key)
+        if val and val ~= "" and val ~= key then
+            return val
+        end
+    end
+    return fallback
+end
+
 local function render()
     if weather == nil or weather.current == nil then
         if weatherError then
             panel.render(ui.column({ gap = 16, padding = 24, align = "center" }, {
                 ui.glyph({ name = "cloud-off", size = 48, color = "error" }),
-                ui.label({ text = "Non se puideron cargar os datos de MeteoGalicia", fontSize = 16, fontWeight = "bold", color = "error" }),
+                ui.label({ text = tr("ui.error_load", "Non se puideron cargar os datos de MeteoGalicia"), fontSize = 16, fontWeight = "bold", color = "error" }),
                 ui.label({ text = tostring(weatherError), fontSize = 13, color = "on_surface_variant" }),
-                ui.button({ text = "Reintentar", glyph = "refresh", variant = "primary", onClick = "onRefresh" }),
+                ui.button({ text = tr("ui.retry", "Reintentar"), glyph = "refresh", variant = "primary", onClick = "onRefresh" }),
             }))
         else
             panel.render(ui.column({ gap = 16, padding = 32, align = "center" }, {
                 ui.glyph({ name = "cloud-rain", size = 48, color = "primary" }),
-                ui.label({ text = "Cargando predición de MeteoGalicia…", fontSize = 15, color = "on_surface_variant" }),
+                ui.label({ text = tr("ui.loading", "Cargando predición de MeteoGalicia…"), fontSize = 15, color = "on_surface_variant" }),
             }))
         end
         return
@@ -122,9 +132,9 @@ local function render()
     -- ── 2. PRESTRIP / TIRA HORARIA ────────────────────────────────────────────
     rootChildren[#rootChildren + 1] = ui.row({ gap = 6, align = "center" }, {
         ui.glyph({ name = "clock", size = 15, color = "primary" }),
-        ui.label({ text = "Predición por horas (Hoxe)", fontSize = 14, fontWeight = "bold", color = "on_surface" }),
+        ui.label({ text = tr("ui.hourly_title", "Predición por horas (Hoxe)"), fontSize = 14, fontWeight = "bold", color = "on_surface" }),
         ui.spacer(),
-        ui.label({ text = "Próximas " .. tostring(math.min(hoursLimit, #hourly)) .. " horas", fontSize = 11, color = "on_surface_variant" }),
+        ui.label({ text = string.format(tr("ui.upcoming_hours", "Próximas %d horas"), math.min(hoursLimit, #hourly)), fontSize = 11, color = "on_surface_variant" }),
     })
 
     local hourCards = {}
@@ -181,12 +191,126 @@ local function render()
 
     rootChildren[#rootChildren + 1] = ui.row({ gap = 8, align = "center" }, hourCards)
 
-    -- ── 3. COMENTARIO OFICIAL DE METEOGALICIA ─────────────────────────────────
+    -- ── 3. RESUMO DIARIO (VINDEIROS DÍAS) ────────────────────────────────────
+    local showDailySummary = noctalia.getConfig("show_daily_summary")
+    if showDailySummary == nil then showDailySummary = true end
+
+    local dailyDays = weather.dailyDays or {}
+    if showDailySummary and #dailyDays > 0 then
+        rootChildren[#rootChildren + 1] = ui.separator()
+        rootChildren[#rootChildren + 1] = ui.row({ gap = 6, align = "center" }, {
+            ui.glyph({ name = "calendar", size = 15, color = "primary" }),
+            ui.label({ text = tr("ui.daily_title", "Resumo dos vindeiros días"), fontSize = 14, fontWeight = "bold", color = "on_surface" }),
+        })
+
+        local isEn = (tr("ui.today", "Hoxe") == "Today")
+        local weekdaysTable = isEn and shared.WEEKDAYS_EN or shared.WEEKDAYS_GL
+        local monthsTable = isEn and shared.MONTHS_EN or shared.MONTHS_GL
+
+        local dayCards = {}
+        for _, d in ipairs(dailyDays) do
+            local isToday = (d.reach == 0)
+            local dayTitle = "Hoxe"
+            if d.reach == 0 then
+                dayTitle = tr("ui.today", "Hoxe")
+            elseif d.reach == 1 then
+                dayTitle = tr("ui.tomorrow", "Mañá")
+            else
+                dayTitle = weekdaysTable[d.weekday] or ("Día " .. tostring(d.reach))
+            end
+
+            local dateSub = ""
+            if d.day and d.day > 0 and d.month and d.month > 0 then
+                dateSub = string.format("%d %s", d.day, monthsTable[d.month] or "")
+            end
+
+            local cardBg = isToday and "primary/0.12" or "surface_variant/0.45"
+            local cardBorder = isToday and "primary/0.35" or "outline/0.15"
+
+            local titleChildren = {
+                ui.label({
+                    text = dayTitle,
+                    fontSize = 12,
+                    fontWeight = "bold",
+                    color = isToday and "primary" or "on_surface",
+                }),
+            }
+            if dateSub ~= "" then
+                titleChildren[#titleChildren + 1] = ui.label({
+                    text = dateSub,
+                    fontSize = 10,
+                    color = "on_surface_variant",
+                })
+            end
+
+            local metaChildren = {
+                ui.glyph({ name = "droplet", size = 11, color = "secondary" }),
+                ui.label({
+                    text = tostring(d.rainProb or 0) .. "%",
+                    fontSize = 11,
+                    fontWeight = "bold",
+                    color = "secondary",
+                }),
+            }
+
+            if d.windDesc and d.windDesc ~= "" then
+                metaChildren[#metaChildren + 1] = ui.label({
+                    text = "• " .. d.windDesc,
+                    fontSize = 10,
+                    color = "on_surface_variant",
+                    maxLines = 1,
+                })
+            end
+
+            dayCards[#dayCards + 1] = ui.column({
+                flexGrow = 1,
+                gap = 5,
+                align = "center",
+                padding = 8,
+                radius = 8,
+                fill = cardBg,
+                border = cardBorder,
+                borderWidth = 1,
+            }, {
+                ui.row({ gap = 4, align = "center" }, titleChildren),
+                ui.glyph({
+                    name = d.glyph or "cloud",
+                    size = 24,
+                    color = d.color or "primary",
+                }),
+                ui.label({
+                    text = d.skyDesc or "",
+                    fontSize = 11,
+                    color = "on_surface",
+                    maxLines = 1,
+                }),
+                ui.row({ gap = 8, align = "center" }, {
+                    ui.label({
+                        text = "↓ " .. tostring(d.tempMin or 0) .. "°",
+                        fontSize = 12,
+                        fontWeight = "bold",
+                        color = "secondary",
+                    }),
+                    ui.label({
+                        text = "↑ " .. tostring(d.tempMax or 0) .. "°",
+                        fontSize = 12,
+                        fontWeight = "bold",
+                        color = "error",
+                    }),
+                }),
+                ui.row({ gap = 4, align = "center" }, metaChildren),
+            })
+        end
+
+        rootChildren[#rootChildren + 1] = ui.row({ gap = 8, align = "center" }, dayCards)
+    end
+
+    -- ── 4. COMENTARIO OFICIAL DE METEOGALICIA ─────────────────────────────────
     if today.comment and today.comment ~= "" then
         rootChildren[#rootChildren + 1] = ui.separator()
         rootChildren[#rootChildren + 1] = ui.row({ gap = 6, align = "center" }, {
             ui.glyph({ name = "message-report", size = 15, color = "primary" }),
-            ui.label({ text = "Comentario oficial de MeteoGalicia", fontSize = 13, fontWeight = "bold", color = "on_surface" }),
+            ui.label({ text = tr("ui.comment_title", "Comentario oficial de MeteoGalicia"), fontSize = 13, fontWeight = "bold", color = "on_surface" }),
         })
 
         rootChildren[#rootChildren + 1] = ui.column({
@@ -204,7 +328,7 @@ local function render()
         })
     end
 
-    -- ── 4. BADGES INFORMATIVOS E PE DE PÁXINA ─────────────────────────────────
+    -- ── 5. BADGES INFORMATIVOS E PE DE PÁXINA ─────────────────────────────────
     rootChildren[#rootChildren + 1] = ui.separator()
 
     local indicators = {}
@@ -245,7 +369,7 @@ local function render()
         ui.row({ gap = 14, align = "center" }, indicators),
         ui.spacer(),
         ui.button({
-            text = "Abrir na web",
+            text = tr("ui.open_web", "Abrir na web"),
             glyph = "external-link",
             variant = "outline",
             controlSize = "sm",

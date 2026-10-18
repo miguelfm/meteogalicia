@@ -93,6 +93,42 @@ local function poll()
                 warningLevel = todayShort.warningLevel or 0,
             }
 
+            local dailyDays = {}
+            for idx, dEntry in ipairs(shortTermList) do
+                local reach = dEntry.reach or (idx - 1)
+                local sky = shared.getSky(dEntry.forecastSkyId)
+
+                local dateStr = dEntry.dateForecast or ""
+                local yStr, mStr, dStr = dateStr:match("(%d+)-(%d+)-(%d+)")
+                local y = tonumber(yStr) or 0
+                local m = tonumber(mStr) or 0
+                local d = tonumber(dStr) or 0
+                local wday = 0
+                if y > 0 and m > 0 and d > 0 then
+                    local t = os.time({ year = y, month = m, day = d, hour = 12 })
+                    wday = tonumber(os.date("%w", t)) or 0
+                end
+
+                dailyDays[#dailyDays + 1] = {
+                    reach = reach,
+                    day = d,
+                    month = m,
+                    year = y,
+                    weekday = wday,
+                    tempMin = dEntry.temperatureMin or 0,
+                    tempMax = dEntry.temperatureMax or 0,
+                    skyId = dEntry.forecastSkyId or 101,
+                    skyDesc = dEntry.forecastSkyDescription or sky.desc,
+                    glyph = sky.glyph,
+                    color = sky.color,
+                    rainProb = dEntry.probabilityRain or 0,
+                    windDesc = dEntry.forecastWindDescription or "",
+                    warningLevel = dEntry.warningLevel or 0,
+                    uv = dEntry.uvMax or 0,
+                    ica = dEntry.ica or 0,
+                }
+            end
+
             -- Procesar horas
             local hoursRaw = hourlyData.forecastDataTime or {}
             local nowLocalHour = tonumber(os.date("%H")) or 12
@@ -151,6 +187,7 @@ local function poll()
                     time = currentEntry and currentEntry.time or string.format("%02d:00", nowLocalHour),
                 },
                 today = todayInfo,
+                dailyDays = dailyDays,
                 hourly = processedHours,
                 updatedAt = os.date("%H:%M"),
             }

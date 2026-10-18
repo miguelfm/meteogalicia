@@ -19,6 +19,7 @@ Plugin nativo para o shell de escritorio **Noctalia** (en Wayland / Hyprland) qu
   * *Tooltip* detallado con rango de temperaturas, vento e hora de actualización.
 * **Panel Emerxente Completo (`panel`)**:
   * **Tira horaria**: Predición detallada hora a hora para o día en curso con icona, temperatura, probabilidade de choiva e vento.
+  * **Resumo diario dos vindeiros días**: Tarxetas sinópticas (Hoxe, Mañá e días seguintes) con mínimas/máximas, estado do ceo, choiva e vento.
   * **Comentario oficial**: Texto descritivo e análise sinóptica redactada polos meteorólogos de MeteoGalicia.
   * **Indicadores ambientais**: Calidade do aire (ICA), índice ultravioleta máximo (UV) e dirección/velocidade do vento.
   * **Botón directo** para abrir o concello na webapp oficial de MeteoGalicia.
@@ -56,6 +57,7 @@ O plugin permite configurar os seguintes parámetros no panel de configuración 
 | `show_town_name` | `bool` | `true` | Amosa o nome do concello na cápsula da barra. |
 | `show_rain_prob` | `bool` | `true` | Amosa a probabilidade de choiva se é maior do 0%. |
 | `hours_count` | `int` | `12` | Número de tarxetas horarias a amosar no panel (de 6 a 24). |
+| `show_daily_summary` | `bool` | `true` | Amosa as tarxetas do resumo dos vindeiros días debaixo da información horaria. |
 
 ---
 

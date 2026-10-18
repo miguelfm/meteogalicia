@@ -10,5 +10,17 @@
   "settings.show_rain_prob.label": "Amosar probabilidade de choiva",
   "settings.show_rain_prob.description": "Amosa a probabilidade de precipitación na barra se é maior do 0%.",
   "settings.hours_count.label": "Horas a amosar no panel",
-  "settings.hours_count.description": "Número de horas futuras a amosar nas tarxetas do panel (de 6 a 24 horas)."
+  "settings.hours_count.description": "Número de horas futuras a amosar nas tarxetas do panel (de 6 a 24 horas).",
+  "settings.show_daily_summary.label": "Amosar resumo diario no panel",
+  "settings.show_daily_summary.description": "Amosa as tarxetas do resumo dos vindeiros días (Hoxe, Mañá...) debaixo da información horaria.",
+  "ui.hourly_title": "Predición por horas (Hoxe)",
+  "ui.daily_title": "Resumo dos vindeiros días",
+  "ui.today": "Hoxe",
+  "ui.tomorrow": "Mañá",
+  "ui.upcoming_hours": "Próximas %d horas",
+  "ui.comment_title": "Comentario oficial de MeteoGalicia",
+  "ui.open_web": "Abrir na web",
+  "ui.retry": "Reintentar",
+  "ui.loading": "Cargando predición de MeteoGalicia…",
+  "ui.error_load": "Non se puideron cargar os datos de MeteoGalicia"
 }

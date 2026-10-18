@@ -10,5 +10,17 @@
   "settings.show_rain_prob.label": "Show rain probability",
   "settings.show_rain_prob.description": "Displays precipitation chance on the bar when greater than 0%.",
   "settings.hours_count.label": "Hourly forecast entries",
-  "settings.hours_count.description": "Number of upcoming hourly cards to display in the panel (6 to 24 hours)."
+  "settings.hours_count.description": "Number of upcoming hourly cards to display in the panel (6 to 24 hours).",
+  "settings.show_daily_summary.label": "Show daily summary in panel",
+  "settings.show_daily_summary.description": "Displays short-term daily summary cards (Today, Tomorrow...) beneath the hourly forecast.",
+  "ui.hourly_title": "Hourly forecast (Today)",
+  "ui.daily_title": "Upcoming days forecast",
+  "ui.today": "Today",
+  "ui.tomorrow": "Tomorrow",
+  "ui.upcoming_hours": "Next %d hours",
+  "ui.comment_title": "Official MeteoGalicia commentary",
+  "ui.open_web": "Open in browser",
+  "ui.retry": "Retry",
+  "ui.loading": "Loading MeteoGalicia forecast…",
+  "ui.error_load": "Could not load MeteoGalicia data"
 }
