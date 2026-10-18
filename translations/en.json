@@ -38,5 +38,11 @@
   "ui.solar_tooltip": "Solar times: Sunrise and Sunset",
   "ui.retry": "Retry",
   "ui.loading": "Loading MeteoGalicia forecast…",
-  "ui.error_load": "Could not load MeteoGalicia data"
+  "ui.error_load": "Could not load MeteoGalicia data",
+  "tooltip.town": "Town",
+  "tooltip.condition": "Condition",
+  "tooltip.temperature": "Temperature",
+  "tooltip.rain_prob": "Rain",
+  "tooltip.wind": "Wind",
+  "tooltip.updated": "Updated"
 }

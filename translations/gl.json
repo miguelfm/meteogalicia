@@ -38,5 +38,11 @@
   "ui.solar_tooltip": "Horarios solares: Orto (amencer) e Ocaso (solpor)",
   "ui.retry": "Reintentar",
   "ui.loading": "Cargando predición de MeteoGalicia…",
-  "ui.error_load": "Non se puideron cargar os datos de MeteoGalicia"
+  "ui.error_load": "Non se puideron cargar os datos de MeteoGalicia",
+  "tooltip.town": "Concello",
+  "tooltip.condition": "Estado",
+  "tooltip.temperature": "Temperatura",
+  "tooltip.rain_prob": "Choiva",
+  "tooltip.wind": "Vento",
+  "tooltip.updated": "Actualizado"
 }

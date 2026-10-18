@@ -7,6 +7,16 @@ local weatherData = nil
 local weatherError = nil
 local isLoading = false
 
+local function tr(key: string, fallback: string): string
+    if type(noctalia.tr) == "function" then
+        local val = noctalia.tr(key)
+        if val and val ~= "" and val ~= key then
+            return val
+        end
+    end
+    return fallback
+end
+
 local function render()
     local showTown = noctalia.getConfig("show_town_name") == true
     local showRain = noctalia.getConfig("show_rain_prob") ~= false
@@ -52,19 +62,20 @@ local function render()
             })
         end
 
-        -- Tooltip con información detallada
-        local ttLines = {
-            string.format("<b>%s</b> — MeteoGalicia", weatherData.officialName or weatherData.concelloName or "Fene"),
-            string.format("%s, %d°C (Min: %d°C / Máx: %d°C)", cur.skyDesc or "", cur.temp or 0, today.tempMin or 0, today.tempMax or 0),
-            string.format("Probabilidade de choiva: %d%%", cur.rainProb or 0),
-            string.format("Vento: %s (%d km/h)", cur.windDesc or "Calma", cur.windSpeed or 0),
+        -- Tooltip con información estruturada (táboa nativa de dúas columnas de Noctalia)
+        local town = weatherData.officialName or weatherData.concelloName or "Fene"
+        local rows = {
+            { key = tr("tooltip.town", "Concello"), value = town },
+            { key = tr("tooltip.condition", "Estado"), value = cur.skyDesc or "Predición" },
+            { key = tr("tooltip.temperature", "Temperatura"), value = string.format("%d°C (Min: %d°C / Máx: %d°C)", cur.temp or 0, today.tempMin or 0, today.tempMax or 0) },
+            { key = tr("tooltip.rain_prob", "Choiva"), value = string.format("%d%%", cur.rainProb or 0) },
+            { key = tr("tooltip.wind", "Vento"), value = string.format("%s (%d km/h)", cur.windDesc ~= "" and cur.windDesc or "Calma", cur.windSpeed or 0) },
         }
         if weatherData.updatedAt then
-            ttLines[#ttLines + 1] = string.format("<small>Actualizado ás %s</small>", weatherData.updatedAt)
+            rows[#rows + 1] = { key = tr("tooltip.updated", "Actualizado"), value = weatherData.updatedAt }
         end
-        ttLines[#ttLines + 1] = "<i>Preme para ver a predición por horas e o informe</i>"
 
-        barWidget.setTooltip(table.concat(ttLines, "\n"))
+        barWidget.setTooltip(rows)
     elseif weatherError then
         children[#children + 1] = ui.glyph({
             name = "cloud-off",
