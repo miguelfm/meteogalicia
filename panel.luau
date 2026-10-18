@@ -8,6 +8,7 @@ local shared = require("./shared.luau")
 local weather = nil
 local weatherError = nil
 local isLoading = false
+local render: () -> () = function() end
 
 type ScaleConfig = {
     panelPadding: number,
@@ -81,7 +82,7 @@ local SCALES: { [string]: ScaleConfig } = {
         sectionIcon = 15,
         sectionTitle = 14,
         sectionSub = 11,
-        hourlyWidth = 58,
+        hourlyWidth = 54,
         hourlyPad = 6,
         hourlyGap = 5,
         hourlyTime = 11,
@@ -130,7 +131,7 @@ local SCALES: { [string]: ScaleConfig } = {
         sectionIcon = 18,
         sectionTitle = 17,
         sectionSub = 13,
-        hourlyWidth = 72,
+        hourlyWidth = 70,
         hourlyPad = 8,
         hourlyGap = 6,
         hourlyTime = 13,
@@ -179,7 +180,7 @@ local SCALES: { [string]: ScaleConfig } = {
         sectionIcon = 24,
         sectionTitle = 22,
         sectionSub = 16,
-        hourlyWidth = 88,
+        hourlyWidth = 86,
         hourlyPad = 10,
         hourlyGap = 8,
         hourlyTime = 16,
@@ -187,7 +188,7 @@ local SCALES: { [string]: ScaleConfig } = {
         hourlyTemp = 22,
         hourlyRainIcon = 15,
         hourlyRainText = 16,
-        hourlyRowGap = 8,
+        hourlyRowGap = 10,
         dailyPad = 14,
         dailyGap = 8,
         dailyTitle = 20,
@@ -213,6 +214,22 @@ function onRefresh()
     noctalia.state.set("weather_request_refresh", true)
 end
 
+function onPrevHours()
+    local curOffset = tonumber(noctalia.state.get("hourly_offset")) or 0
+    if curOffset > 0 then
+        noctalia.state.set("hourly_offset", math.max(0, curOffset - 12))
+        render()
+    end
+end
+
+function onNextHours()
+    local curOffset = tonumber(noctalia.state.get("hourly_offset")) or 0
+    if curOffset < 12 then
+        noctalia.state.set("hourly_offset", 12)
+        render()
+    end
+end
+
 function onOpenWeb()
     local id = (weather and weather.concelloId) or 15035
     noctalia.runAsync(string.format("xdg-open 'https://www.meteogalicia.gal/web/predicion/concellos/%d/0'", id))
@@ -234,6 +251,10 @@ function onKey(chord: string?, pressed: boolean)
         onRefresh()
     elseif lower == "s" or lower == "c" then
         onOpenSettings()
+    elseif lower == "left" or lower == "arrowleft" or lower == "[" then
+        onPrevHours()
+    elseif lower == "right" or lower == "arrowright" or lower == "]" then
+        onNextHours()
     end
 end
 
@@ -274,7 +295,7 @@ local function getThemeFills(): (string, string, string, string)
     return rootFill, cardBgNorm, cardBgActive, commentaryBg
 end
 
-local function render()
+render = function()
     local s = getScale()
     local rootFill, cardBgNorm, cardBgActive, commentaryBg = getThemeFills()
 
@@ -434,18 +455,56 @@ local function render()
     rootChildren[#rootChildren + 1] = ui.separator()
 
     -- ── 2. PRESTRIP / TIRA HORARIA ────────────────────────────────────────────
-    rootChildren[#rootChildren + 1] = ui.row({ gap = 6, align = "center" }, {
+    local hourlyOffset = tonumber(noctalia.state.get("hourly_offset")) or 0
+    local totalHourly = math.min(hoursLimit, #hourly)
+    if hourlyOffset >= totalHourly then hourlyOffset = 0 end
+
+    rootChildren[#rootChildren + 1] = ui.row({ gap = 8, align = "center" }, {
         ui.glyph({ name = "clock", size = s.sectionIcon, color = "primary" }),
         ui.label({ text = tr("ui.hourly_title", "Predición por horas"), fontSize = s.sectionTitle, fontWeight = "bold", color = "on_surface" }),
+        ui.label({ text = string.format(tr("ui.upcoming_hours", "Próximas %d horas"), totalHourly), fontSize = s.sectionSub, color = "on_surface_variant" }),
         ui.spacer(),
-        ui.label({ text = string.format(tr("ui.upcoming_hours_scroll", "Próximas %d horas (desprazable)"), math.min(hoursLimit, #hourly)), fontSize = s.sectionSub, color = "on_surface_variant" }),
+        ui.row({ gap = 4, align = "center" }, {
+            ui.button({
+                glyph = "chevron-left",
+                variant = (hourlyOffset > 0 and "outline" or "ghost"),
+                controlSize = "sm",
+                onClick = "onPrevHours",
+                tooltip = tr("ui.hours_first_12", "Ver primeiras 12 horas"),
+            }),
+            ui.button({
+                text = "1–12 h",
+                variant = (hourlyOffset == 0 and "primary" or "ghost"),
+                controlSize = "sm",
+                onClick = "onPrevHours",
+                tooltip = tr("ui.hours_first_12", "Ver primeiras 12 horas"),
+            }),
+            ui.button({
+                text = "13–24 h",
+                variant = (hourlyOffset > 0 and "primary" or "ghost"),
+                controlSize = "sm",
+                onClick = "onNextHours",
+                tooltip = tr("ui.hours_next_12", "Ver seguintes 12 horas"),
+            }),
+            ui.button({
+                glyph = "chevron-right",
+                variant = (hourlyOffset == 0 and "outline" or "ghost"),
+                controlSize = "sm",
+                onClick = "onNextHours",
+                tooltip = tr("ui.hours_next_12", "Ver seguintes 12 horas"),
+            }),
+        }),
     })
 
     local hourCards = {}
     local currentHourSec = math.floor(os.time() / 3600) * 3600
 
-    for idx, h in ipairs(hourly) do
-        if idx > hoursLimit then break end
+    local startIdx = hourlyOffset + 1
+    local endIdx = math.min(hourlyOffset + 12, totalHourly)
+
+    for idx = startIdx, endIdx do
+        local h = hourly[idx]
+        if not h then break end
 
         local isCurrent = (h.timestamp == currentHourSec) or (idx == 1 and not h.isTomorrow)
         local cardBg = isCurrent and cardBgActive or cardBgNorm
@@ -501,11 +560,33 @@ local function render()
         })
     end
 
-    rootChildren[#rootChildren + 1] = ui.scroll({
-        width = s.chartWidth,
+    rootChildren[#rootChildren + 1] = ui.row({
+        gap = s.hourlyRowGap,
+        align = "center",
+        justify = "center",
+    }, hourCards)
+
+    -- Barra de desprazamento e posición discreta
+    rootChildren[#rootChildren + 1] = ui.row({
+        gap = 8,
+        align = "center",
+        justify = "center",
         paddingV = 2,
     }, {
-        ui.row({ gap = s.hourlyRowGap, align = "center" }, hourCards)
+        ui.button({
+            text = (hourlyOffset == 0 and "●  1 – 12 h  (actual)" or "1 – 12 h"),
+            variant = (hourlyOffset == 0 and "outline" or "ghost"),
+            controlSize = "sm",
+            onClick = "onPrevHours",
+            tooltip = tr("ui.hours_first_12", "Ver primeiras 12 horas"),
+        }),
+        ui.button({
+            text = (hourlyOffset > 0 and "●  13 – 24 h  (actual)" or "13 – 24 h"),
+            variant = (hourlyOffset > 0 and "outline" or "ghost"),
+            controlSize = "sm",
+            onClick = "onNextHours",
+            tooltip = tr("ui.hours_next_12", "Ver seguintes 12 horas"),
+        }),
     })
 
     -- ── 3. RESUMO DIARIO (VINDEIROS DÍAS) ────────────────────────────────────
@@ -639,9 +720,14 @@ noctalia.state.watch("weather_loading", function(val)
     render()
 end)
 
+noctalia.state.watch("hourly_offset", function()
+    render()
+end)
+
 function onOpen()
     weather = noctalia.state.get("weather")
     weatherError = noctalia.state.get("weather_error")
+    noctalia.state.set("hourly_offset", 0)
     render()
 end
 

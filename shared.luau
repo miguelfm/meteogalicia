@@ -307,8 +307,8 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     local tMax = maxVal + 2
     if tMax <= tMin then tMax = tMin + 5 end
 
-    -- Zonas verticais ben diferenciadas para evitar solapamentos
-    local chartTop = math.floor(height * 0.31)
+    -- Zonas verticais proporcionais ben diferenciadas para evitar solapamentos
+    local chartTop = math.floor(height * 0.38)
     local chartBot = math.floor(height * 0.58)
 
     local function yTemp(t: number): number
@@ -335,8 +335,8 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     local areaPath = maxCurve .. string.format(" L %.1f %.1f ", minPts[#minPts].x, minPts[#minPts].y) .. string.sub(revMinCurve, 2) .. " Z"
 
     -- Zona de choiva (eixo secundario 0% a 100%)
-    local rainTopY = math.floor(height * 0.65)
-    local rainBaselineY = math.floor(height * 0.85)
+    local rainTopY = math.floor(height * 0.67)
+    local rainBaselineY = math.floor(height * 0.84)
     local rainMaxH = rainBaselineY - rainTopY
 
     local function yRain(prob: number): number
@@ -374,7 +374,7 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     end
 
     -- Eixo esquerdo: Temperatura (°C)
-    svgParts[#svgParts + 1] = string.format('  <text x="%d" y="%d" fill="#ff9800" font-size="10" font-weight="bold" text-anchor="end">°C</text>\n', padLeft - 10, chartTop - 12)
+    svgParts[#svgParts + 1] = string.format('  <text x="%d" y="%d" fill="#ff9800" font-size="10" font-weight="bold" text-anchor="end">°C</text>\n', padLeft - 10, chartTop - 8)
     local gridTemps = { math.floor(tMin + 2), math.floor((tMin + tMax) / 2), math.floor(tMax - 2) }
     for _, tVal in ipairs(gridTemps) do
         local gy = yTemp(tVal)
@@ -391,7 +391,7 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
   <text x="%d" y="%.1f" fill="#38bdf8" opacity="0.8" font-size="10" font-weight="bold" text-anchor="end">0%%</text>
   <text x="%d" y="%.1f" fill="#38bdf8" opacity="0.8" font-size="10" font-weight="bold" text-anchor="end">50%%</text>
   <text x="%d" y="%.1f" fill="#38bdf8" opacity="0.8" font-size="10" font-weight="bold" text-anchor="end">100%%</text>
-]], width - 12, rainTopY - 12, padLeft - 6, rainBaselineY, width - padRight + 6, rainBaselineY,
+]], width - 12, rainTopY - 6, padLeft - 6, rainBaselineY, width - padRight + 6, rainBaselineY,
     width - 12, yRain(0) + 3, width - 12, yRain(50) + 3, width - 12, yRain(100) + 3)
 
     -- Barras verticais de choiva ancoradas na base 0%%
@@ -403,8 +403,7 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         local barY = rainBaselineY - barH
         svgParts[#svgParts + 1] = string.format([[
     <rect x="%.1f" y="%.1f" width="%d" height="%.1f" rx="4" fill="url(#rainBarGrad)" stroke="#38bdf8" stroke-width="1.2" stroke-opacity="0.7"/>
-    <text x="%.1f" y="%.1f" fill="#38bdf8" font-size="11" font-weight="bold" text-anchor="middle">💧 %d%%</text>
-]], x - barW / 2, barY, barW, barH, x, barY - 6, rain)
+]], x - barW / 2, barY, barW, barH)
     end
 
     -- Liña de tendencia de choiva conectando as barras
@@ -432,10 +431,18 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     <!-- Mínima -->
     <circle cx="%.1f" cy="%.1f" r="5" fill="#141720" stroke="#38bdf8" stroke-width="2.8"/>
     <text x="%.1f" y="%.1f" fill="#38bdf8" font-size="13" font-weight="bold" text-anchor="middle">%d°</text>
-]], mx, my, mx, my - 8, tMax, nx, ny, nx, ny + 17, tMinD)
+]], mx, my, mx, my - 8, tMax, nx, ny, nx, ny + 16, tMinD)
     end
 
-    -- Cabeceira de cada día (Día, Data, Icona meteorolóxica SVG e Descrición)
+    -- Cabeceira de cada día (Día, Data, Icona, Predición e Probabilidade de choiva xuntas)
+    local dayY = math.floor(height * 0.07)
+    local dateY = math.floor(height * 0.12)
+    local iconY = math.floor(height * 0.16)
+    local skyY = math.floor(height * 0.23)
+    local badgeY = math.floor(height * 0.26)
+    local badgeW = 70
+    local badgeH = 19
+
     for i, d in ipairs(dailyDays) do
         local x = xs[i]
         local isToday = (d.reach == 0)
@@ -455,18 +462,23 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
 
         local dayColor = isToday and "#ff9800" or "#f8fafc"
         local skyClean = shared.cleanHtml(d.skyDesc or ""):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
-        local iconSvg = shared.renderWeatherSvgIcon(d.glyph or "cloud", x, 56)
+        local iconSvg = shared.renderWeatherSvgIcon(d.glyph or "cloud", x, iconY)
+        local rain = tonumber(d.rainProb) or 0
 
         svgParts[#svgParts + 1] = string.format([[
-    <text x="%.1f" y="24" fill="%s" font-size="14" font-weight="bold" text-anchor="middle">%s</text>
-    <text x="%.1f" y="40" fill="#94a3b8" font-size="11" text-anchor="middle">%s</text>
+    <text x="%.1f" y="%d" fill="%s" font-size="14" font-weight="bold" text-anchor="middle">%s</text>
+    <text x="%.1f" y="%d" fill="#94a3b8" font-size="11" text-anchor="middle">%s</text>
     %s
-    <text x="%.1f" y="80" fill="#cbd5e1" font-size="12" font-weight="500" text-anchor="middle">%s</text>
-]], x, dayColor, dayTitle, x, dateSub, iconSvg, x, skyClean)
+    <text x="%.1f" y="%d" fill="#cbd5e1" font-size="12" font-weight="500" text-anchor="middle">%s</text>
+    <rect x="%.1f" y="%d" width="%d" height="%d" rx="9.5" fill="#0284c7" fill-opacity="0.25" stroke="#38bdf8" stroke-width="1.2"/>
+    <text x="%.1f" y="%d" fill="#38bdf8" font-size="11" font-weight="bold" text-anchor="middle">💧 %d%%</text>
+]], x, dayY, dayColor, dayTitle, x, dateY, dateSub, iconSvg, x, skyY, skyClean, x - badgeW / 2, badgeY, badgeW, badgeH, x, badgeY + 14, rain)
     end
 
     -- Franxa inferior para o vento
-    svgParts[#svgParts + 1] = string.format('  <line x1="16" y1="%d" x2="%d" y2="%d" stroke="#222838" stroke-width="1"/>\n', height - 40, width - 16, height - 40)
+    local windSepY = math.floor(height * 0.88)
+    local windY = math.floor(height * 0.90)
+    svgParts[#svgParts + 1] = string.format('  <line x1="16" y1="%d" x2="%d" y2="%d" stroke="#222838" stroke-width="1"/>\n', windSepY, width - 16, windSepY)
     for i, d in ipairs(dailyDays) do
         local x = xs[i]
         local windDesc = tostring(d.windDesc or "")
@@ -483,7 +495,7 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
       </g>
       <text x="26" y="14" fill="#cbd5e1" font-size="12" font-weight="500">%s</text>
     </g>
-]], x - halfW, height - 26, deg, cleanWind)
+]], x - halfW, windY, deg, cleanWind)
     end
 
     svgParts[#svgParts + 1] = "</svg>"
