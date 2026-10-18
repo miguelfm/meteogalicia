@@ -377,15 +377,24 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         svgParts[#svgParts + 1] = string.format('  <line x1="%.1f" y1="12" x2="%.1f" y2="%d" stroke="#1c2230" stroke-width="1"/>\n', sepX, sepX, height - 12)
     end
 
+    local isXlarge = (opts and opts.isXlarge == true)
+    local tempFontSize = isXlarge and 16 or 14
+    local dayTitleSize = isXlarge and 16 or 14
+    local dateSubSize = isXlarge and 13 or 11
+    local skyDescSize = isXlarge and 13.5 or 12
+    local windTextSize = isXlarge and 13.5 or 12
+    local axisFontSize = isXlarge and 12 or 11
+    local axisTitleSize = isXlarge and 12 or 10
+
     -- Eixo esquerdo: Temperatura (°C)
-    svgParts[#svgParts + 1] = string.format('  <text x="%d" y="%d" fill="#ff9800" font-size="10" font-weight="bold" text-anchor="end">°C</text>\n', padLeft - 10, chartTop - 8)
+    svgParts[#svgParts + 1] = string.format('  <text x="%d" y="%d" fill="#ff9800" font-size="%d" font-weight="bold" text-anchor="end">°C</text>\n', padLeft - 10, chartTop - 8, axisTitleSize)
     local gridTemps = { math.floor(tMin + 2), math.floor((tMin + tMax) / 2), math.floor(tMax - 2) }
     for _, tVal in ipairs(gridTemps) do
         local gy = yTemp(tVal)
         svgParts[#svgParts + 1] = string.format([[
     <line x1="%d" y1="%.1f" x2="%d" y2="%.1f" stroke="#222838" stroke-width="1" stroke-dasharray="4,4"/>
-    <text x="%d" y="%.1f" fill="#64748b" font-size="11" font-weight="500" text-anchor="end">%d°</text>
-]], padLeft - 6, gy, width - padRight + 6, gy, padLeft - 10, gy + 4, tVal)
+    <text x="%d" y="%.1f" fill="#64748b" font-size="%d" font-weight="500" text-anchor="end">%d°</text>
+]], padLeft - 6, gy, width - padRight + 6, gy, padLeft - 10, gy + 4, axisFontSize, tVal)
     end
 
     -- Curvas e degradado de temperaturas
@@ -405,25 +414,24 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         svgParts[#svgParts + 1] = string.format([[
     <!-- Máxima -->
     <circle cx="%.1f" cy="%.1f" r="5" fill="#141720" stroke="#ff7849" stroke-width="2.8"/>
-    <text x="%.1f" y="%.1f" fill="#ff7849" font-size="14" font-weight="bold" text-anchor="middle">%d°</text>
+    <text x="%.1f" y="%.1f" fill="#ff7849" font-size="%d" font-weight="bold" text-anchor="middle">%d°</text>
 
     <!-- Mínima -->
     <circle cx="%.1f" cy="%.1f" r="5" fill="#141720" stroke="#38bdf8" stroke-width="2.8"/>
-    <text x="%.1f" y="%.1f" fill="#38bdf8" font-size="14" font-weight="bold" text-anchor="middle">%d°</text>
-]], mx, my, mx, my - 8, tMax, nx, ny, nx, ny + 16, tMinD)
+    <text x="%.1f" y="%.1f" fill="#38bdf8" font-size="%d" font-weight="bold" text-anchor="middle">%d°</text>
+]], mx, my, mx, my - 8, tempFontSize, tMax, nx, ny, nx, ny + 18, tempFontSize, tMinD)
     end
 
     -- Cabeceira de cada día (Día, Data, Icona, Predición e Probabilidade de choiva con alto contraste e indicador de tamaño)
-    local isXlarge = (opts and opts.isXlarge == true)
     local dayY = 22
     local dateY = 38
     local iconY = 54
     local skyY = 76
     local badgeY = 86
-    local badgeW = isXlarge and 92 or 84
-    local badgeH = 30
-    local barTrackW = isXlarge and 70 or 64
-    local fontSize = isXlarge and 15.0 or 13.5
+    local badgeW = isXlarge and 96 or 84
+    local badgeH = isXlarge and 32 or 30
+    local barTrackW = isXlarge and 74 or 64
+    local fontSize = isXlarge and 16.0 or 13.5
 
     for i, d in ipairs(dailyDays) do
         local x = xs[i]
@@ -449,17 +457,17 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
 
         local bx = x - badgeW / 2
         local dropScale = 0.8 + (rain / 100.0) * 0.45
-        local dropX = x - 18 - (dropScale - 0.8) * 3
+        local dropX = x - (isXlarge and 20 or 18) - (dropScale - 0.8) * 3
         local dropY = badgeY + 5 - (dropScale - 0.8) * 2
         local fillW = math.max(3.0, (rain / 100.0) * barTrackW)
         local barX = x - barTrackW / 2
-        local barY = badgeY + 20
+        local barY = badgeY + (isXlarge and 22 or 20)
 
         svgParts[#svgParts + 1] = string.format([[
-    <text x="%.1f" y="%d" fill="%s" font-size="14" font-weight="bold" text-anchor="middle">%s</text>
-    <text x="%.1f" y="%d" fill="#94a3b8" font-size="11" text-anchor="middle">%s</text>
+    <text x="%.1f" y="%d" fill="%s" font-size="%d" font-weight="bold" text-anchor="middle">%s</text>
+    <text x="%.1f" y="%d" fill="#94a3b8" font-size="%d" text-anchor="middle">%s</text>
     %s
-    <text x="%.1f" y="%d" fill="#cbd5e1" font-size="12" font-weight="500" text-anchor="middle">%s</text>
+    <text x="%.1f" y="%d" fill="#cbd5e1" font-size="%.1f" font-weight="500" text-anchor="middle">%s</text>
     <rect x="%.1f" y="%d" width="%d" height="%d" rx="8" fill="#0b1329" stroke="#38bdf8" stroke-width="1.2"/>
     <g transform="translate(%.1f, %.1f) scale(%.2f)">
       <path d="M 4 1 C 4 1, 1 5, 1 8 A 3 3 0 0 0 7 8 C 7 5, 4 1, 4 1 Z" fill="#38bdf8"/>
@@ -467,8 +475,8 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     <text x="%.1f" y="%d" fill="#ffffff" font-size="%.1f" font-weight="bold" text-anchor="middle">%d%%</text>
     <rect x="%.1f" y="%d" width="%d" height="4" rx="2" fill="#1e293b"/>
     <rect x="%.1f" y="%d" width="%.1f" height="4" rx="2" fill="url(#rainGaugeGrad)"/>
-]], x, dayY, dayColor, dayTitle, x, dateY, dateSub, iconSvg, x, skyY, skyClean,
-    bx, badgeY, badgeW, badgeH, dropX, dropY, dropScale, x + 8, badgeY + 14, fontSize, rain,
+]], x, dayY, dayColor, dayTitleSize, dayTitle, x, dateY, dateSubSize, dateSub, iconSvg, x, skyY, skyDescSize, skyClean,
+    bx, badgeY, badgeW, badgeH, dropX, dropY, dropScale, x + 8, badgeY + (isXlarge and 15 or 14), fontSize, rain,
     barX, barY, barTrackW, barX, barY, fillW)
     end
 
@@ -482,7 +490,7 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         if windDesc == "" then windDesc = "Calma" end
         local deg = shared.getWindAngle(windDesc)
         local cleanWind = windDesc:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
-        local halfW = math.floor((#cleanWind * 6.5 + 26) / 2)
+        local halfW = math.floor((#cleanWind * (isXlarge and 7.2 or 6.5) + 26) / 2)
 
         svgParts[#svgParts + 1] = string.format([[
     <g transform="translate(%.1f, %d)">
@@ -490,9 +498,9 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
       <g transform="rotate(%d, 10, 10)">
         <path d="M 10 3 L 15 16 L 10 13 L 5 16 Z" fill="#94a3b8"/>
       </g>
-      <text x="26" y="14" fill="#cbd5e1" font-size="12" font-weight="500">%s</text>
+      <text x="26" y="14" fill="#cbd5e1" font-size="%.1f" font-weight="500">%s</text>
     </g>
-]], x - halfW, windY, deg, cleanWind)
+]], x - halfW, windY, deg, windTextSize, cleanWind)
     end
 
     svgParts[#svgParts + 1] = "</svg>"
