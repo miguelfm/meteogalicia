@@ -39,10 +39,14 @@
   "ui.retry": "Reintentar",
   "ui.loading": "Cargando predición de MeteoGalicia…",
   "ui.error_load": "Non se puideron cargar os datos de MeteoGalicia",
+  "ui.min": "Mín",
+  "ui.max": "Máx",
+  "ui.calm": "Calma",
   "tooltip.town": "Concello",
   "tooltip.condition": "Estado",
   "tooltip.temperature": "Temperatura",
   "tooltip.rain_prob": "Choiva",
   "tooltip.wind": "Vento",
-  "tooltip.updated": "Actualizado"
+  "tooltip.updated": "Actualizado",
+  "tooltip.click_hint": "Preme para ver a predición detallada"
 }

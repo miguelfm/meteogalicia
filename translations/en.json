@@ -39,10 +39,14 @@
   "ui.retry": "Retry",
   "ui.loading": "Loading MeteoGalicia forecast…",
   "ui.error_load": "Could not load MeteoGalicia data",
+  "ui.min": "Min",
+  "ui.max": "Max",
+  "ui.calm": "Calm",
   "tooltip.town": "Town",
   "tooltip.condition": "Condition",
   "tooltip.temperature": "Temperature",
   "tooltip.rain_prob": "Rain",
   "tooltip.wind": "Wind",
-  "tooltip.updated": "Updated"
+  "tooltip.updated": "Updated",
+  "tooltip.click_hint": "Click to view detailed forecast"
 }

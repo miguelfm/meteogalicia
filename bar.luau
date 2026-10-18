@@ -62,20 +62,49 @@ local function render()
             })
         end
 
-        -- Tooltip con información estruturada (táboa nativa de dúas columnas de Noctalia)
+        -- Tooltip con información completa e lexible sen truncado de texto
         local town = weatherData.officialName or weatherData.concelloName or "Fene"
-        local rows = {
-            { key = tr("tooltip.town", "Concello"), value = town },
-            { key = tr("tooltip.condition", "Estado"), value = cur.skyDesc or "Predición" },
-            { key = tr("tooltip.temperature", "Temperatura"), value = string.format("%d°C (Min: %d°C / Máx: %d°C)", cur.temp or 0, today.tempMin or 0, today.tempMax or 0) },
-            { key = tr("tooltip.rain_prob", "Choiva"), value = string.format("%d%%", cur.rainProb or 0) },
-            { key = tr("tooltip.wind", "Vento"), value = string.format("%s (%d km/h)", cur.windDesc ~= "" and cur.windDesc or "Calma", cur.windSpeed or 0) },
-        }
-        if weatherData.updatedAt then
-            rows[#rows + 1] = { key = tr("tooltip.updated", "Actualizado"), value = weatherData.updatedAt }
+        local tempStr = string.format("%d°C", cur.temp or 0)
+        if today.tempMin and today.tempMax then
+            tempStr = string.format(
+                "%d°C (%s: %d°C / %s: %d°C)",
+                cur.temp or 0,
+                tr("ui.min", "Mín"),
+                today.tempMin,
+                tr("ui.max", "Máx"),
+                today.tempMax
+            )
         end
 
-        barWidget.setTooltip(rows)
+        local condStr = (cur.skyDesc and cur.skyDesc ~= "") and (cur.skyDesc .. ", " .. tempStr) or tempStr
+
+        local windStr
+        if cur.windDesc and cur.windDesc ~= "" then
+            windStr = string.format("%s: %s (%d km/h)", tr("tooltip.wind", "Vento"), cur.windDesc, cur.windSpeed or 0)
+        elseif cur.windSpeed and cur.windSpeed > 0 then
+            windStr = string.format("%s: %d km/h", tr("tooltip.wind", "Vento"), cur.windSpeed)
+        else
+            windStr = string.format("%s: %s", tr("tooltip.wind", "Vento"), tr("ui.calm", "Calma"))
+        end
+
+        local lines = {
+            string.format("%s — MeteoGalicia", town),
+            condStr,
+            string.format("%s: %d%%", tr("tooltip.rain_prob", "Choiva"), cur.rainProb or 0),
+            windStr,
+        }
+
+        if today.sunrise and today.sunset and today.sunrise ~= "" and today.sunset ~= "" then
+            lines[#lines + 1] = string.format("%s: %s · %s: %s", tr("ui.sunrise", "Orto"), today.sunrise, tr("ui.sunset", "Ocaso"), today.sunset)
+        end
+
+        if weatherData.updatedAt then
+            lines[#lines + 1] = string.format("%s: %s", tr("tooltip.updated", "Actualizado"), weatherData.updatedAt)
+        end
+
+        lines[#lines + 1] = tr("tooltip.click_hint", "Preme para ver a predición detallada")
+
+        barWidget.setTooltip(table.concat(lines, "\n"))
     elseif weatherError then
         children[#children + 1] = ui.glyph({
             name = "cloud-off",
