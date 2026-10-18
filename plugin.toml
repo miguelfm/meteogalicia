@@ -109,8 +109,8 @@ entry = "bar.luau"
 [[panel]]
 id = "panel"
 entry = "panel.luau"
-width = 1000
-height = 870
+width = 1260
+height = 1000
 placement = "attached"
 position = "auto"
 open_near_click = true
