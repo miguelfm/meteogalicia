@@ -291,9 +291,9 @@ function onKey(chord: string?, pressed: boolean)
         onStepPrevHour()
     elseif lower == "right" or lower == "arrowright" or lower == "]" then
         onStepNextHour()
-    elseif lower == "pageup" then
+    elseif lower == "pageup" or lower == "page_up" or lower == "prior" then
         onPrevHours()
-    elseif lower == "pagedown" then
+    elseif lower == "pagedown" or lower == "page_down" or lower == "next" then
         onNextHours()
     end
 end
