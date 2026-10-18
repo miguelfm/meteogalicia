@@ -434,9 +434,9 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
 ]], mx, my, mx, my - 8, tempFontSize, tMax, nx, ny, nx, ny + 18, tempFontSize, tMinD)
     end
 
-    -- Cabeceira de cada día (Día, Data, Icona diante da predición e probabilidade de choiva integrados sen recadro)
-    local dayY = 24
-    local dateY = 42
+    -- Cabeceira de cada día (Día e data na primeira liña; icona diante da predición e probabilidade de choiva na segunda)
+    local dayY = 28
+    local weatherY = 64
 
     for i, d in ipairs(dailyDays) do
         local x = xs[i]
@@ -454,6 +454,7 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         if d.day and d.day > 0 and d.month and d.month > 0 then
             dateSub = string.format("%d %s", d.day, monthsTable[d.month] or "")
         end
+        local dateSuffix = (dateSub ~= "") and (", " .. dateSub) or ""
 
         local dayColor = isToday and "#ff9800" or "#f8fafc"
         local skyClean = shared.cleanHtml(d.skyDesc or ""):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
@@ -474,16 +475,16 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
 
         local startX = x - groupW / 2
         local iconCx = startX + 14
-        local iconCy = 72
+        local iconCy = weatherY
         local iconSvg = shared.renderWeatherSvgIcon(d.glyph or "cloud", iconCx, iconCy)
 
         local textX = startX + iconW + gap1
-        local textY = 77
+        local textY = weatherY + 5
         local dropX = textX + textW + gap2
-        local dropY = 67
+        local dropY = weatherY - 5
         local dropScale = 0.85 + (rain / 100.0) * 0.4
         local rainTextX = dropX + 13
-        local rainTextY = 77
+        local rainTextY = weatherY + 5
 
         local gaugeW = rainGroupW + 4
         local gaugeX = dropX - 2
@@ -491,8 +492,10 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         local fillW = math.max(rain > 0 and 2.5 or 0.0, (rain / 100.0) * gaugeW)
 
         svgParts[#svgParts + 1] = string.format([[
-    <text x="%.1f" y="%d" fill="%s" font-size="%d" font-weight="bold" text-anchor="middle">%s</text>
-    <text x="%.1f" y="%d" fill="#94a3b8" font-size="%d" text-anchor="middle">%s</text>
+    <text x="%.1f" y="%d" text-anchor="middle">
+      <tspan fill="%s" font-size="%d" font-weight="bold">%s</tspan>
+      <tspan fill="#94a3b8" font-size="%d" font-weight="500">%s</tspan>
+    </text>
     %s
     <text x="%.1f" y="%.1f" fill="#f1f5f9" font-size="%.1f" font-weight="500" text-anchor="start">%s</text>
     <g transform="translate(%.1f, %.1f) scale(%.2f)">
@@ -501,7 +504,7 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     <text x="%.1f" y="%.1f" fill="#38bdf8" font-size="%.1f" font-weight="bold" text-anchor="start">%d%%</text>
     <rect x="%.1f" y="%.1f" width="%.1f" height="2.5" rx="1.25" fill="#1e293b"/>
     <rect x="%.1f" y="%.1f" width="%.1f" height="2.5" rx="1.25" fill="url(#rainGaugeGrad)"/>
-]], x, dayY, dayColor, dayTitleSize, dayTitle, x, dateY, dateSubSize, dateSub, iconSvg,
+]], x, dayY, dayColor, dayTitleSize, dayTitle, dateSubSize, dateSuffix, iconSvg,
     textX, textY, skyFontSize, skyClean,
     dropX, dropY, dropScale,
     rainTextX, rainTextY, rainFontSize, rain,
