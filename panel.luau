@@ -53,6 +53,7 @@ type ScaleConfig = {
     commentPad: number,
     footerIcon: number,
     footerText: number,
+    headerBtnGap: number,
     btnSize: string,
 }
 
@@ -67,6 +68,7 @@ local SCALES: { [string]: ScaleConfig } = {
         headerTemp = 32,
         headerDeg = 18,
         headerMinMax = 13,
+        headerBtnGap = 4,
         headerSunIcon = 28,
         headerSunText = 12,
         headerSunTime = 16,
@@ -113,6 +115,7 @@ local SCALES: { [string]: ScaleConfig } = {
         headerTemp = 42,
         headerDeg = 24,
         headerMinMax = 16,
+        headerBtnGap = 6,
         headerSunIcon = 36,
         headerSunText = 14,
         headerSunTime = 20,
@@ -159,6 +162,7 @@ local SCALES: { [string]: ScaleConfig } = {
         headerTemp = 60,
         headerDeg = 30,
         headerMinMax = 20,
+        headerBtnGap = 8,
         headerSunIcon = 44,
         headerSunText = 17,
         headerSunTime = 26,
@@ -362,20 +366,11 @@ local function render()
             color = cur.color or "primary",
         }),
         ui.column({ gap = 3 }, {
-            ui.row({ gap = 8, align = "center" }, {
-                ui.label({
-                    text = weather.officialName or weather.concelloName or "Fene",
-                    fontSize = s.headerTown,
-                    fontWeight = "bold",
-                    color = "on_surface",
-                }),
-                ui.column({
-                    padding = 4,
-                    radius = 4,
-                    fill = "surface_variant",
-                }, {
-                    ui.label({ text = "MeteoGalicia", fontSize = s.headerBadge, fontWeight = "bold", color = "primary" }),
-                }),
+            ui.label({
+                text = weather.officialName or weather.concelloName or "Fene",
+                fontSize = s.headerTown,
+                fontWeight = "bold",
+                color = "on_surface",
             }),
             ui.label({
                 text = cur.skyDesc or "Predición diaria",
@@ -411,18 +406,18 @@ local function render()
                 }),
             }),
         }),
-        ui.row({ gap = 4, align = "center" }, {
-            ui.button({
-                glyph = "refresh",
-                variant = "ghost",
-                tooltip = tr("ui.refresh_tooltip", "Actualizar datos (R)"),
-                onClick = "onRefresh",
-            }),
+        ui.column({ gap = s.headerBtnGap, align = "center" }, {
             ui.button({
                 glyph = "settings",
                 variant = "ghost",
                 tooltip = tr("ui.settings_tooltip", "Axustes de MeteoGalicia (S)"),
                 onClick = "onOpenSettings",
+            }),
+            ui.button({
+                glyph = "refresh",
+                variant = "ghost",
+                tooltip = tr("ui.refresh_tooltip", "Actualizar datos (R)"),
+                onClick = "onRefresh",
             }),
         }),
     })
@@ -677,7 +672,7 @@ local function render()
         ui.row({ gap = 14, align = "center" }, indicators),
         ui.spacer(),
         ui.button({
-            text = tr("ui.open_web", "Abrir na web"),
+            text = tr("ui.open_web", "MeteoGalicia"),
             glyph = "external-link",
             variant = "outline",
             controlSize = s.btnSize,

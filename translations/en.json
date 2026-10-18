@@ -29,7 +29,7 @@
   "ui.tomorrow": "Tomorrow",
   "ui.upcoming_hours": "Next %d hours",
   "ui.comment_title": "General outlook",
-  "ui.open_web": "Open in browser",
+  "ui.open_web": "MeteoGalicia",
   "ui.settings": "Settings",
   "ui.settings_tooltip": "MeteoGalicia settings (S)",
   "ui.refresh_tooltip": "Refresh data (R)",
