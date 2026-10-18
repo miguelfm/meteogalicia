@@ -1,7 +1,7 @@
 --!strict
 -- Detailed weather panel for MeteoGalicia.
--- Shows current conditions, horizontal hourly forecast cards,
--- upcoming daily summary, official forecaster commentary, and meteorological indicators.
+-- Shows current conditions, interactive 48h hourly forecast with keyboard/scroll navigation,
+-- upcoming days forecast with continuous SVG temperature & rain chart, official commentary, and indicators.
 
 local shared = require("./shared.luau")
 
