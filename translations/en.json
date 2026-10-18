@@ -33,6 +33,9 @@
   "ui.settings": "Settings",
   "ui.settings_tooltip": "MeteoGalicia settings (S)",
   "ui.refresh_tooltip": "Refresh data (R)",
+  "ui.sunrise": "Sunrise",
+  "ui.sunset": "Sunset",
+  "ui.solar_tooltip": "Solar times: Sunrise and Sunset",
   "ui.retry": "Retry",
   "ui.loading": "Loading MeteoGalicia forecast…",
   "ui.error_load": "Could not load MeteoGalicia data"

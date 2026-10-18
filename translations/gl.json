@@ -33,6 +33,9 @@
   "ui.settings": "Axustes",
   "ui.settings_tooltip": "Axustes de MeteoGalicia (S)",
   "ui.refresh_tooltip": "Actualizar datos (R)",
+  "ui.sunrise": "Orto",
+  "ui.sunset": "Ocaso",
+  "ui.solar_tooltip": "Horarios solares: Orto (amencer) e Ocaso (solpor)",
   "ui.retry": "Reintentar",
   "ui.loading": "Cargando predición de MeteoGalicia…",
   "ui.error_load": "Non se puideron cargar os datos de MeteoGalicia"

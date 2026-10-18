@@ -117,4 +117,67 @@ shared.MONTHS_EN = {
     [9] = "Sep", [10] = "Oct", [11] = "Nov", [12] = "Dec",
 }
 
+shared.DEFAULT_LAT = 43.475156
+shared.DEFAULT_LON = -8.167317
+
+-- Cálculo astronómico oficial de orto (amencer) e ocaso (solpor) segundo algoritmo solar NOAA
+function shared.calcSolar(lat: number?, lon: number?, ts: number?): (string, string)
+    local effectiveLat = lat or shared.DEFAULT_LAT
+    local effectiveLon = lon or shared.DEFAULT_LON
+    local effectiveTs = ts or os.time()
+
+    local d = os.date("*t", effectiveTs)
+    local year = d.year
+    local month = d.month
+    local day = d.day
+
+    local N1 = math.floor(275 * month / 9)
+    local N2 = math.floor((month + 9) / 12)
+    local N3 = 1 + math.floor((year - 4 * math.floor(year / 4) + 2) / 3)
+    local N = N1 - (N2 * N3) + day - 30
+
+    local lngHour = effectiveLon / 15.0
+
+    local function getTime(isRise: boolean): string
+        local t = N + ((isRise and 6.0 or 18.0) - lngHour) / 24.0
+        local M = (0.9856 * t) - 3.289
+        local Mrad = math.rad(M)
+        local L = M + (1.916 * math.sin(Mrad)) + (0.020 * math.sin(2 * Mrad)) + 282.634
+        L = L % 360.0
+        local Lrad = math.rad(L)
+        local RA = math.deg(math.atan(0.91764 * math.tan(Lrad))) % 360.0
+        local Lquadrant = math.floor(L / 90.0) * 90.0
+        local RAquadrant = math.floor(RA / 90.0) * 90.0
+        RA = (RA + (Lquadrant - RAquadrant)) / 15.0
+        local sinDec = 0.39782 * math.sin(Lrad)
+        local cosDec = math.cos(math.asin(sinDec))
+        local latRad = math.rad(effectiveLat)
+        local cosH = (math.cos(math.rad(90.8333)) - (sinDec * math.sin(latRad))) / (cosDec * math.cos(latRad))
+        if cosH > 1 or cosH < -1 then
+            return "--:--"
+        end
+        local H = isRise and (360.0 - math.deg(math.acos(cosH))) or math.deg(math.acos(cosH))
+        H = H / 15.0
+        local T = H + RA - (0.06571 * t) - 6.622
+        local UT = (T - lngHour) % 24.0
+
+        local utc = os.date("!*t", effectiveTs)
+        local loc = os.date("*t", effectiveTs)
+        local utcSec = os.time({ year = utc.year, month = utc.month, day = utc.day, hour = utc.hour, min = utc.min, sec = utc.sec, isdst = false })
+        local locSec = os.time({ year = loc.year, month = loc.month, day = loc.day, hour = loc.hour, min = loc.min, sec = loc.sec, isdst = false })
+        local tzOffset = os.difftime(locSec, utcSec) / 3600.0
+
+        local localHours = (UT + tzOffset) % 24.0
+        local hh = math.floor(localHours)
+        local mm = math.floor(((localHours - hh) * 60) + 0.5)
+        if mm >= 60 then
+            hh = (hh + 1) % 24
+            mm = 0
+        end
+        return string.format("%02d:%02d", hh, mm)
+    end
+
+    return getTime(true), getTime(false)
+end
+
 return shared

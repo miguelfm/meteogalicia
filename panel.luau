@@ -19,6 +19,13 @@ type ScaleConfig = {
     headerTemp: number,
     headerDeg: number,
     headerMinMax: number,
+    headerSunIcon: number,
+    headerSunText: number,
+    headerSunTime: number,
+    headerSunPadH: number,
+    headerSunPadV: number,
+    headerSunGap: number,
+    headerSunDividerHeight: number,
     sectionIcon: number,
     sectionTitle: number,
     sectionSub: number,
@@ -60,6 +67,13 @@ local SCALES: { [string]: ScaleConfig } = {
         headerTemp = 32,
         headerDeg = 18,
         headerMinMax = 13,
+        headerSunIcon = 15,
+        headerSunText = 10,
+        headerSunTime = 12,
+        headerSunPadH = 10,
+        headerSunPadV = 5,
+        headerSunGap = 10,
+        headerSunDividerHeight = 18,
         sectionIcon = 15,
         sectionTitle = 14,
         sectionSub = 11,
@@ -99,6 +113,13 @@ local SCALES: { [string]: ScaleConfig } = {
         headerTemp = 42,
         headerDeg = 24,
         headerMinMax = 16,
+        headerSunIcon = 20,
+        headerSunText = 12,
+        headerSunTime = 16,
+        headerSunPadH = 14,
+        headerSunPadV = 8,
+        headerSunGap = 14,
+        headerSunDividerHeight = 26,
         sectionIcon = 18,
         sectionTitle = 17,
         sectionSub = 13,
@@ -138,6 +159,13 @@ local SCALES: { [string]: ScaleConfig } = {
         headerTemp = 52,
         headerDeg = 28,
         headerMinMax = 18,
+        headerSunIcon = 26,
+        headerSunText = 13,
+        headerSunTime = 19,
+        headerSunPadH = 18,
+        headerSunPadV = 10,
+        headerSunGap = 18,
+        headerSunDividerHeight = 32,
         sectionIcon = 22,
         sectionTitle = 20,
         sectionSub = 15,
@@ -281,6 +309,72 @@ local function render()
     local rootChildren = {}
 
     -- ── 1. CABECEIRA PRINCIPAL ───────────────────────────────────────────────
+    local sunrise = today.sunrise
+    local sunset = today.sunset
+    if not sunrise or not sunset then
+        local r, s_time = shared.calcSolar(today.latitude, today.longitude, os.time())
+        sunrise = sunrise or r
+        sunset = sunset or s_time
+    end
+
+    local solarBadge = ui.row({
+        gap = s.headerSunGap,
+        align = "center",
+        paddingH = s.headerSunPadH,
+        paddingV = s.headerSunPadV,
+        radius = 12,
+        fill = cardBgNorm,
+        border = "outline/0.25",
+        borderWidth = 1,
+        tooltip = tr("ui.solar_tooltip", "Horarios solares: Orto (amencer) e Ocaso (solpor)"),
+    }, {
+        ui.row({ gap = 8, align = "center" }, {
+            ui.glyph({
+                name = "weather-sunrise",
+                size = s.headerSunIcon,
+                color = "tertiary",
+            }),
+            ui.column({ gap = 1 }, {
+                ui.label({
+                    text = tr("ui.sunrise", "Orto"),
+                    fontSize = s.headerSunText,
+                    color = "on_surface_variant",
+                }),
+                ui.label({
+                    text = sunrise,
+                    fontSize = s.headerSunTime,
+                    fontWeight = "bold",
+                    color = "on_surface",
+                }),
+            }),
+        }),
+        ui.column({
+            width = 1,
+            height = s.headerSunDividerHeight,
+            fill = "outline/0.30",
+        }, {}),
+        ui.row({ gap = 8, align = "center" }, {
+            ui.glyph({
+                name = "weather-sunset",
+                size = s.headerSunIcon,
+                color = "secondary",
+            }),
+            ui.column({ gap = 1 }, {
+                ui.label({
+                    text = tr("ui.sunset", "Ocaso"),
+                    fontSize = s.headerSunText,
+                    color = "on_surface_variant",
+                }),
+                ui.label({
+                    text = sunset,
+                    fontSize = s.headerSunTime,
+                    fontWeight = "bold",
+                    color = "on_surface",
+                }),
+            }),
+        }),
+    })
+
     local headerRow = ui.row({ gap = 16, align = "center" }, {
         ui.glyph({
             name = cur.glyph or "cloud-sun",
@@ -309,6 +403,8 @@ local function render()
                 color = "on_surface_variant",
             }),
         }),
+        ui.spacer(),
+        solarBadge,
         ui.spacer(),
         ui.column({ gap = 2, align = "end" }, {
             ui.row({ gap = 4, align = "center" }, {
