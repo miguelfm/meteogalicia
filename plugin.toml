@@ -43,7 +43,7 @@ key = "show_town_name"
 type = "bool"
 label_key = "settings.show_town_name.label"
 description_key = "settings.show_town_name.description"
-default = true
+default = false
 
 [[setting]]
 key = "show_rain_prob"

@@ -3,14 +3,14 @@
 -- Shows weather glyph, temperature, rain probability (if > 0%) and municipality name.
 -- Clicking opens the detailed hourly forecast panel.
 
-local showTown = noctalia.getConfig("show_town_name") ~= false
-local showRain = noctalia.getConfig("show_rain_prob") ~= false
-
 local weatherData = nil
 local weatherError = nil
 local isLoading = false
 
 local function render()
+    local showTown = noctalia.getConfig("show_town_name") == true
+    local showRain = noctalia.getConfig("show_rain_prob") ~= false
+
     local children = {}
 
     if weatherData and weatherData.current then
@@ -31,23 +31,23 @@ local function render()
             color = "on_surface",
         })
 
-        -- Probabilidade de choiva (se está activada e é > 0)
+        -- Probabilidade de choiva / humidade (se está activada e é > 0)
         if showRain and cur.rainProb and cur.rainProb > 0 then
             children[#children + 1] = ui.row({ gap = 2, align = "center" }, {
-                ui.glyph({ name = "droplet", size = 11, color = "secondary" }),
+                ui.glyph({ name = "droplet", size = 13, color = "secondary" }),
                 ui.label({
                     text = tostring(cur.rainProb) .. "%",
-                    fontSize = 11,
+                    fontSize = 13,
                     color = "secondary",
                 }),
             })
         end
 
-        -- Nome do concello
+        -- Nome do concello (desactivado por defecto na barra)
         if showTown then
             children[#children + 1] = ui.label({
                 text = weatherData.concelloName or "Fene",
-                fontSize = 12,
+                fontSize = 13,
                 color = "on_surface_variant",
             })
         end

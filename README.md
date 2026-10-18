@@ -54,7 +54,7 @@ O plugin permite configurar os seguintes parámetros no panel de configuración 
 | `concello_id` | `int` | `15035` | Código INE do concello (ex: `15035` para Fene, `15036` para Ferrol, `15030` para A Coruña, `15078` para Santiago, `36057` para Vigo). |
 | `concello_name` | `string` | `Fene` | Nome amosado na barra e na cabeceira do panel. |
 | `refresh_minutes`| `int` | `30` | Frecuencia de actualización en minutos (mínimo 5). |
-| `show_town_name` | `bool` | `true` | Amosa o nome do concello na cápsula da barra. |
+| `show_town_name` | `bool` | `false` | Amosa o nome do concello na cápsula da barra (desactivado por defecto). |
 | `show_rain_prob` | `bool` | `true` | Amosa a probabilidade de choiva se é maior do 0%. |
 | `hours_count` | `int` | `12` | Número de tarxetas horarias a amosar no panel (de 6 a 24). |
 | `show_daily_summary` | `bool` | `true` | Amosa as tarxetas do resumo dos vindeiros días debaixo da información horaria. |
