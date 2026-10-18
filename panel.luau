@@ -33,7 +33,7 @@ local function render()
         if weatherError then
             panel.render(ui.column({ gap = 16, padding = 24, align = "center" }, {
                 ui.glyph({ name = "cloud-off", size = 48, color = "error" }),
-                ui.label({ text = "Non se puideron cargar os datos de MeteoGalicia", fontSize = 16, weight = "bold", color = "error" }),
+                ui.label({ text = "Non se puideron cargar os datos de MeteoGalicia", fontSize = 16, fontWeight = "bold", color = "error" }),
                 ui.label({ text = tostring(weatherError), fontSize = 13, color = "on_surface_variant" }),
                 ui.button({ text = "Reintentar", glyph = "refresh", variant = "primary", onClick = "onRefresh" }),
             }))
@@ -65,15 +65,15 @@ local function render()
                 ui.label({
                     text = weather.officialName or weather.concelloName or "Fene",
                     fontSize = 22,
-                    weight = "bold",
+                    fontWeight = "bold",
                     color = "on_surface",
                 }),
-                ui.box({
-                    padding = { top = 2, bottom = 2, left = 6, right = 6 },
+                ui.column({
+                    padding = 4,
                     radius = 4,
                     fill = "surface_variant",
                 }, {
-                    ui.label({ text = "MeteoGalicia", fontSize = 10, weight = "bold", color = "primary" }),
+                    ui.label({ text = "MeteoGalicia", fontSize = 10, fontWeight = "bold", color = "primary" }),
                 }),
             }),
             ui.label({
@@ -84,26 +84,26 @@ local function render()
         }),
         ui.spacer(),
         ui.column({ gap = 2, align = "end" }, {
-            ui.row({ gap = 4, align = "baseline" }, {
+            ui.row({ gap = 4, align = "center" }, {
                 ui.label({
                     text = tostring(cur.temp or 0),
                     fontSize = 32,
-                    weight = "bold",
+                    fontWeight = "bold",
                     color = "on_surface",
                 }),
-                ui.label({ text = "°C", fontSize = 18, weight = "bold", color = "on_surface_variant" }),
+                ui.label({ text = "°C", fontSize = 18, fontWeight = "bold", color = "on_surface_variant" }),
             }),
             ui.row({ gap = 8 }, {
                 ui.label({
                     text = "↓ " .. tostring(today.tempMin or 0) .. "°",
                     fontSize = 13,
-                    weight = "bold",
-                    color = "info",
+                    fontWeight = "bold",
+                    color = "secondary",
                 }),
                 ui.label({
                     text = "↑ " .. tostring(today.tempMax or 0) .. "°",
                     fontSize = 13,
-                    weight = "bold",
+                    fontWeight = "bold",
                     color = "error",
                 }),
             }),
@@ -122,7 +122,7 @@ local function render()
     -- ── 2. PRESTRIP / TIRA HORARIA ────────────────────────────────────────────
     rootChildren[#rootChildren + 1] = ui.row({ gap = 6, align = "center" }, {
         ui.glyph({ name = "clock", size = 15, color = "primary" }),
-        ui.label({ text = "Predición por horas (Hoxe)", fontSize = 14, weight = "bold", color = "on_surface" }),
+        ui.label({ text = "Predición por horas (Hoxe)", fontSize = 14, fontWeight = "bold", color = "on_surface" }),
         ui.spacer(),
         ui.label({ text = "Próximas " .. tostring(math.min(hoursLimit, #hourly)) .. " horas", fontSize = 11, color = "on_surface_variant" }),
     })
@@ -132,49 +132,47 @@ local function render()
 
     local count = 0
     for _, h in ipairs(hourly) do
-        -- Amosar a partir da hora actual ou as primeiras N horas
         if h.hourNum >= currentHourNum or count > 0 or #hourly <= hoursLimit then
             count = count + 1
             if count > hoursLimit then break end
 
             local isCurrent = (h.hourNum == currentHourNum)
-
             local cardBg = isCurrent and "primary/0.14" or "surface_variant/0.5"
             local cardBorder = isCurrent and "primary/0.4" or "outline/0.15"
 
-            hourCards[#hourCards + 1] = ui.box({
-                width = 58,
-                padding = { top = 8, bottom = 8, left = 4, right = 4 },
+            hourCards[#hourCards + 1] = ui.column({
+                gap = 5,
+                align = "center",
+                width = 56,
+                padding = 6,
                 radius = 8,
                 fill = cardBg,
                 border = cardBorder,
                 borderWidth = 1,
             }, {
-                ui.column({ gap = 5, align = "center" }, {
+                ui.label({
+                    text = h.time or "--:--",
+                    fontSize = 11,
+                    fontWeight = isCurrent and "bold" or "normal",
+                    color = isCurrent and "primary" or "on_surface_variant",
+                }),
+                ui.glyph({
+                    name = h.glyph or "cloud",
+                    size = 20,
+                    color = h.color or "on_surface",
+                }),
+                ui.label({
+                    text = tostring(h.temp or 0) .. "°",
+                    fontSize = 13,
+                    fontWeight = "bold",
+                    color = "on_surface",
+                }),
+                ui.row({ gap = 1, align = "center" }, {
+                    ui.glyph({ name = "droplet", size = 9, color = "secondary" }),
                     ui.label({
-                        text = h.time or "--:--",
-                        fontSize = 11,
-                        weight = isCurrent and "bold" or "normal",
-                        color = isCurrent and "primary" or "on_surface_variant",
-                    }),
-                    ui.glyph({
-                        name = h.glyph or "cloud",
-                        size = 20,
-                        color = h.color or "on_surface",
-                    }),
-                    ui.label({
-                        text = tostring(h.temp or 0) .. "°",
-                        fontSize = 13,
-                        weight = "bold",
-                        color = "on_surface",
-                    }),
-                    ui.row({ gap = 1, align = "center" }, {
-                        ui.glyph({ name = "droplet", size = 9, color = "info" }),
-                        ui.label({
-                            text = tostring(h.rainProb or 0) .. "%",
-                            fontSize = 10,
-                            color = "info",
-                        }),
+                        text = tostring(h.rainProb or 0) .. "%",
+                        fontSize = 10,
+                        color = "secondary",
                     }),
                 }),
             })
@@ -188,10 +186,10 @@ local function render()
         rootChildren[#rootChildren + 1] = ui.separator()
         rootChildren[#rootChildren + 1] = ui.row({ gap = 6, align = "center" }, {
             ui.glyph({ name = "message-report", size = 15, color = "primary" }),
-            ui.label({ text = "Comentario oficial de MeteoGalicia", fontSize = 13, weight = "bold", color = "on_surface" }),
+            ui.label({ text = "Comentario oficial de MeteoGalicia", fontSize = 13, fontWeight = "bold", color = "on_surface" }),
         })
 
-        rootChildren[#rootChildren + 1] = ui.box({
+        rootChildren[#rootChildren + 1] = ui.column({
             padding = 12,
             radius = 8,
             fill = "surface_variant/0.4",
@@ -220,13 +218,13 @@ local function render()
     -- Calidade do aire (ICA)
     if today.ica and today.ica > 0 then
         local icaDesc = "Favorable"
-        local icaColor = "success"
+        local icaColor = "secondary"
         if today.ica >= 4 then
             icaDesc = "Moi mala"
             icaColor = "error"
         elseif today.ica >= 3 then
             icaDesc = "Mala"
-            icaColor = "warning"
+            icaColor = "secondary"
         end
 
         indicators[#indicators + 1] = ui.row({ gap = 4, align = "center" }, {
@@ -238,7 +236,7 @@ local function render()
     -- Índice UV
     if today.uv and today.uv > 0 then
         indicators[#indicators + 1] = ui.row({ gap = 4, align = "center" }, {
-            ui.glyph({ name = "sun-high", size = 14, color = "warning" }),
+            ui.glyph({ name = "sun-high", size = 14, color = "tertiary" }),
             ui.label({ text = "Índice UV máx: " .. tostring(today.uv), fontSize = 12, color = "on_surface_variant" }),
         })
     end

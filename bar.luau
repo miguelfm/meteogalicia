@@ -34,11 +34,11 @@ local function render()
         -- Probabilidade de choiva (se está activada e é > 0)
         if showRain and cur.rainProb and cur.rainProb > 0 then
             children[#children + 1] = ui.row({ gap = 2, align = "center" }, {
-                ui.glyph({ name = "droplet", size = 11, color = "info" }),
+                ui.glyph({ name = "droplet", size = 11, color = "secondary" }),
                 ui.label({
                     text = tostring(cur.rainProb) .. "%",
                     fontSize = 11,
-                    color = "info",
+                    color = "secondary",
                 }),
             })
         end
