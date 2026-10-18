@@ -30,6 +30,9 @@
   "ui.upcoming_hours": "Next %d hours",
   "ui.comment_title": "Official MeteoGalicia commentary",
   "ui.open_web": "Open in browser",
+  "ui.settings": "Settings",
+  "ui.settings_tooltip": "MeteoGalicia settings (S)",
+  "ui.refresh_tooltip": "Refresh data (R)",
   "ui.retry": "Retry",
   "ui.loading": "Loading MeteoGalicia forecast…",
   "ui.error_load": "Could not load MeteoGalicia data"

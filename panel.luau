@@ -174,6 +174,13 @@ function onOpenWeb()
     noctalia.runAsync(string.format("xdg-open 'https://www.meteogalicia.gal/web/predicion/concellos/%d/0'", id))
 end
 
+function onOpenSettings()
+    if type(panel.close) == "function" then
+        panel.close()
+    end
+    noctalia.runAsync("noctalia msg settings-open-plugin miguelfm/meteogalicia")
+end
+
 function onKey(chord: string?, pressed: boolean)
     if not pressed then return end
     local lower = tostring(chord or ""):lower()
@@ -181,6 +188,8 @@ function onKey(chord: string?, pressed: boolean)
         if type(panel.close) == "function" then panel.close() end
     elseif lower == "r" then
         onRefresh()
+    elseif lower == "s" or lower == "c" then
+        onOpenSettings()
     end
 end
 
@@ -322,11 +331,19 @@ local function render()
                 }),
             }),
         }),
-        ui.button({
-            glyph = "refresh",
-            variant = "ghost",
-            tooltip = "Actualizar datos (R)",
-            onClick = "onRefresh",
+        ui.row({ gap = 4, align = "center" }, {
+            ui.button({
+                glyph = "refresh",
+                variant = "ghost",
+                tooltip = tr("ui.refresh_tooltip", "Actualizar datos (R)"),
+                onClick = "onRefresh",
+            }),
+            ui.button({
+                glyph = "settings",
+                variant = "ghost",
+                tooltip = tr("ui.settings_tooltip", "Axustes de MeteoGalicia (S)"),
+                onClick = "onOpenSettings",
+            }),
         }),
     })
 
@@ -579,12 +596,21 @@ local function render()
     local footerRow = ui.row({ gap = 16, align = "center" }, {
         ui.row({ gap = 14, align = "center" }, indicators),
         ui.spacer(),
-        ui.button({
-            text = tr("ui.open_web", "Abrir na web"),
-            glyph = "external-link",
-            variant = "outline",
-            controlSize = s.btnSize,
-            onClick = "onOpenWeb",
+        ui.row({ gap = 8, align = "center" }, {
+            ui.button({
+                text = tr("ui.settings", "Axustes"),
+                glyph = "settings",
+                variant = "outline",
+                controlSize = s.btnSize,
+                onClick = "onOpenSettings",
+            }),
+            ui.button({
+                text = tr("ui.open_web", "Abrir na web"),
+                glyph = "external-link",
+                variant = "outline",
+                controlSize = s.btnSize,
+                onClick = "onOpenWeb",
+            }),
         }),
     })
 

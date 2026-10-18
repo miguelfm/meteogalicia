@@ -66,6 +66,7 @@ O plugin permite configurar os seguintes parámetros no panel de configuración 
 ## Atallos no panel
 
 * <kbd>R</kbd>: Forzar actualización inmediata dos datos.
+* <kbd>S</kbd> / <kbd>C</kbd>: Abrir a xanela de axustes do plugin en Noctalia.
 * <kbd>Esc</kbd>: Pechar o panel.
 
 ---
