@@ -669,8 +669,12 @@ render = function()
 
         local dayName = weekdaysFull[h.weekday] or ""
         local atWord = isEn and "at" or "ás"
-        local rainWord = isEn and "rain" or "choiva"
-        local cardTooltip = string.format("%s, %d %s %s · %s · %d°C · %d%% %s", dayName, h.day or 0, atWord, h.time or "--:--", h.skyDesc or "", tonumber(h.temp) or 0, tonumber(h.rainProb) or 0, rainWord)
+        local rainWord = isEn and "Rain" or "Choiva"
+        local skyPart = (h.skyDesc and h.skyDesc ~= "") and (" · " .. h.skyDesc) or ""
+        local cardTooltip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%",
+            dayName, h.day or 0, atWord, h.time or "--:--",
+            tonumber(h.temp) or 0, skyPart,
+            rainWord, tonumber(h.rainProb) or 0)
 
         hourCards[#hourCards + 1] = ui.column({
             width = effectiveCardWidth,
@@ -782,7 +786,7 @@ render = function()
             local maxTrack = math.min(48, #curveHours)
             local timelineSlots = {}
             local atWord = isEn and "at" or "ás"
-            local rainWord = isEn and "rain" or "choiva"
+            local rainWord = isEn and "Rain" or "Choiva"
 
             for idx = 1, maxTrack do
                 local h = curveHours[idx]
@@ -795,9 +799,11 @@ render = function()
                 local dayName = weekdaysFull[h.weekday] or (h.isTomorrow and tr("ui.tomorrow", "Mañá") or tr("ui.today", "Hoxe"))
                 local hTime = h.time or string.format("%02d:00", hNum)
                 local skyDesc = h.skyDesc or ""
-                local tTip = string.format("%s, %d %s %s · %d°C · %d%% %s%s",
-                    dayName, h.day or 0, atWord, hTime, tonumber(h.temp) or 0, tonumber(h.rainProb) or 0, rainWord,
-                    (skyDesc ~= "" and (" · " .. skyDesc) or ""))
+                local skyPart = (skyDesc ~= "") and (" · " .. skyDesc) or ""
+                local tTip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%",
+                    dayName, h.day or 0, atWord, hTime,
+                    tonumber(h.temp) or 0, skyPart,
+                    rainWord, tonumber(h.rainProb) or 0)
 
                 local tickH = isCurrent and 13 or (isMajor and 9 or (isMid and 6 or 4.5))
                 local tickW = isCurrent and 3.2 or (isMajor and 2.2 or (isMid and 1.6 or 1.2))
@@ -856,34 +862,13 @@ render = function()
                 })
             end
 
-            local day1Title = dailyDays[1] and (weekdaysFull[dailyDays[1].weekday] or tr("ui.today", "Hoxe")) or ""
-            local day2Title = dailyDays[2] and (weekdaysFull[dailyDays[2].weekday] or tr("ui.tomorrow", "Mañá")) or ""
-            local daysLabel = (day1Title ~= "" and day2Title ~= "") and (day1Title .. " → " .. day2Title) or ""
-
-            local selectorHeader = ui.row({
-                align = "center",
-                justify = "space_between",
-                width = s.chartWidth - 28,
-            }, {
-                ui.row({ gap = 6, align = "center" }, {
-                    ui.box({ width = 7, height = 7, radius = 3.5, fill = isDark and "#34d399" or "#059669" }),
-                    ui.label({
-                        text = tr("ui.hourly_track_title", "Previsión horaria (48h)"),
-                        fontSize = s.sectionSub,
-                        fontWeight = "bold",
-                        color = "on_surface",
-                    }),
-                    ui.label({
-                        text = "· " .. tr("ui.hourly_track_hint", "Pasa o rato polos puntos para ver hora, temperatura e choiva"),
-                        fontSize = s.sectionSub - 1,
-                        color = "on_surface_variant",
-                    }),
-                }),
+            local selectorHeader = ui.row({ gap = 6, align = "center" }, {
+                ui.box({ width = 6, height = 6, radius = 3, fill = isDark and "#34d399" or "#059669" }),
                 ui.label({
-                    text = daysLabel,
-                    fontSize = s.sectionSub - 1,
-                    fontWeight = "medium",
-                    color = "on_surface_variant",
+                    text = "Timeline",
+                    fontSize = s.sectionSub,
+                    fontWeight = "bold",
+                    color = "on_surface",
                 }),
             })
 
