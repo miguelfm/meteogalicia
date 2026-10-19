@@ -4,6 +4,7 @@
 -- and publishes a unified, reactive state table for the bar capsule and panel.
 
 local shared = require("./shared.luau")
+local stations = require("./stations.luau")
 
 local inFlight = false
 
@@ -158,9 +159,6 @@ local function poll()
                             method = "GET",
                             headers = headers,
                         }, function(mediumTermRes)
-                            inFlight = false
-                            noctalia.state.set("weather_loading", false)
-
                             local mediumTermData = nil
                             if mediumTermRes and mediumTermRes.ok and mediumTermRes.status == 200 then
                                 mediumTermData = noctalia.json.decode(mediumTermRes.body or "{}")
@@ -435,32 +433,75 @@ local function poll()
                     }
                 end
 
-                local payload = {
-                    concelloId = concelloId,
-                    concelloName = concelloName,
-                    officialName = (dailyData.townHall and dailyData.townHall.name) or concelloName,
-                    current = {
-                        temp = currentEntry and currentEntry.temp or todayInfo.tempMax,
-                        rainProb = currentEntry and currentEntry.rainProb or todayInfo.rainProb,
-                        windSpeed = currentEntry and currentEntry.windSpeed or 0,
-                        windDesc = currentEntry and currentEntry.windDesc or todayInfo.windDesc,
-                        skyCode = currentEntry and currentEntry.skyCode or todayInfo.skyId,
-                        skyDesc = currentEntry and currentEntry.skyDesc or todayInfo.skyDesc,
-                        glyph = currentSky.glyph,
-                        color = currentSky.color,
-                        time = currentEntry and currentEntry.time or string.format("%02d:00", tonumber(os.date("%H", nowSec)) or 12),
-                    },
-                    today = todayInfo,
-                    yesterday = yesterdayInfo,
-                    nextDay = nextDayInfo,
-                    dailyDays = dailyDays,
-                    hourly = processedHours,
-                    hourlyCurve = hourlyCurve,
-                    updatedAt = os.date("%H:%M"),
-                }
+                local finishPayload = function(humidityVal: number?, stationName: string?)
+                    inFlight = false
+                    noctalia.state.set("weather_loading", false)
 
-                noctalia.state.set("weather_error", nil)
-                noctalia.state.set("weather", payload)
+                    local payload = {
+                        concelloId = concelloId,
+                        concelloName = concelloName,
+                        officialName = (dailyData.townHall and dailyData.townHall.name) or concelloName,
+                        current = {
+                            temp = currentEntry and currentEntry.temp or todayInfo.tempMax,
+                            rainProb = currentEntry and currentEntry.rainProb or todayInfo.rainProb,
+                            windSpeed = currentEntry and currentEntry.windSpeed or 0,
+                            windDesc = currentEntry and currentEntry.windDesc or todayInfo.windDesc,
+                            skyCode = currentEntry and currentEntry.skyCode or todayInfo.skyId,
+                            skyDesc = currentEntry and currentEntry.skyDesc or todayInfo.skyDesc,
+                            glyph = currentSky.glyph,
+                            color = currentSky.color,
+                            time = currentEntry and currentEntry.time or string.format("%02d:00", tonumber(os.date("%H", nowSec)) or 12),
+                            humidity = humidityVal,
+                            stationName = stationName,
+                            ica = (currentEntry and currentEntry.ica) or todayInfo.ica or 0,
+                        },
+                        today = todayInfo,
+                        yesterday = yesterdayInfo,
+                        nextDay = nextDayInfo,
+                        dailyDays = dailyDays,
+                        hourly = processedHours,
+                        hourlyCurve = hourlyCurve,
+                        updatedAt = os.date("%H:%M"),
+                    }
+
+                    noctalia.state.set("weather_error", nil)
+                    noctalia.state.set("weather", payload)
+                end
+
+                -- Obter observación en tempo real da estación meteorolóxica máis próxima para humidade relativa
+                noctalia.http({
+                    url = "https://servizos.meteogalicia.gal/mgrss/observacion/ultimos10minEstacionsMeteo.action",
+                    method = "GET",
+                }, function(obsRes)
+                    local humidityVal = nil
+                    local stationName = nil
+                    if obsRes and obsRes.ok and obsRes.status == 200 and obsRes.body then
+                        local ok, obsData = pcall(function()
+                            return noctalia.json.decode(obsRes.body)
+                        end)
+                        if ok and type(obsData) == "table" and type(obsData.listUltimos10min) == "table" then
+                            local bestD = 1e9
+                            for _, o in ipairs(obsData.listUltimos10min) do
+                                local sid = tonumber(o.idEstacion) or 0
+                                local sCoord = stations[sid]
+                                if sCoord and sCoord.lat and sCoord.lon then
+                                    local d = (lat - sCoord.lat) * (lat - sCoord.lat) + (lon - sCoord.lon) * (lon - sCoord.lon)
+                                    if d < bestD then
+                                        for _, m in ipairs(o.listaMedidas or {}) do
+                                            if m.codigoParametro == "HR_AVG_1.5m" and m.valor then
+                                                bestD = d
+                                                humidityVal = math.floor(tonumber(m.valor) + 0.5)
+                                                stationName = sCoord.name
+                                                break
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                    finishPayload(humidityVal, stationName)
+                end)
             end)
         end)
     end)

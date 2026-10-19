@@ -82,7 +82,7 @@ local SCALES: { [string]: ScaleConfig } = {
         sectionIcon = 15,
         sectionTitle = 14,
         sectionSub = 11,
-        hourlyWidth = 104,
+        hourlyWidth = 101,
         hourlyPad = 6,
         hourlyGap = 5,
         hourlyTime = 11,
@@ -101,7 +101,7 @@ local SCALES: { [string]: ScaleConfig } = {
         dailyRainIcon = 11,
         dailyRainText = 11,
         dailyWindText = 10,
-        chartWidth = 1358,
+        chartWidth = 1330,
         chartHeight = 260,
         commentTitle = 13,
         commentText = 12,
@@ -131,7 +131,7 @@ local SCALES: { [string]: ScaleConfig } = {
         sectionIcon = 18,
         sectionTitle = 17,
         sectionSub = 13,
-        hourlyWidth = 104,
+        hourlyWidth = 101,
         hourlyPad = 8,
         hourlyGap = 6,
         hourlyTime = 13,
@@ -150,7 +150,7 @@ local SCALES: { [string]: ScaleConfig } = {
         dailyRainIcon = 13,
         dailyRainText = 13,
         dailyWindText = 11,
-        chartWidth = 1358,
+        chartWidth = 1330,
         chartHeight = 280,
         commentTitle = 15,
         commentText = 14,
@@ -180,7 +180,7 @@ local SCALES: { [string]: ScaleConfig } = {
         sectionIcon = 24,
         sectionTitle = 23,
         sectionSub = 17,
-        hourlyWidth = 104,
+        hourlyWidth = 101,
         hourlyPad = 10,
         hourlyGap = 8,
         hourlyTime = 17,
@@ -199,7 +199,7 @@ local SCALES: { [string]: ScaleConfig } = {
         dailyRainIcon = 17,
         dailyRainText = 17,
         dailyWindText = 15,
-        chartWidth = 1358,
+        chartWidth = 1330,
         chartHeight = 310,
         commentTitle = 21,
         commentText = 18,
@@ -342,6 +342,79 @@ local function getThemeFills(): (string, string, string, string)
     return rootFill, cardBgNorm, cardBgActive, commentaryBg
 end
 
+local function getTimelineGlyphColor(glyphName: string, isDark: boolean): string
+    if string.find(glyphName, "storm") or string.find(glyphName, "thunder") then
+        return isDark and "#f87171" or "#dc2626"
+    elseif string.find(glyphName, "rain") or string.find(glyphName, "snow") or string.find(glyphName, "snowflake") then
+        return isDark and "#38bdf8" or "#0284c7"
+    elseif string.find(glyphName, "sun") then
+        return isDark and "#fbbf24" or "#d97706"
+    elseif string.find(glyphName, "moon") then
+        return isDark and "#38bdf8" or "#0284c7"
+    else
+        return isDark and "#e2e8f0" or "#1e293b"
+    end
+end
+
+local function getWindArrow(windDesc: string?, windSpeed: number?): string
+    if not windDesc or windDesc == "" then return "•" end
+    local desc = windDesc:lower()
+    if desc:find("calm") or (windSpeed ~= nil and windSpeed == 0) then
+        return "•"
+    end
+    if desc:find("nordés") or desc:find("nordeste") or desc:find("northeast") or desc:find("ne") then
+        return "↙"
+    elseif desc:find("noroeste") or desc:find("northwest") or desc:find("no") or desc:find("nw") then
+        return "↘"
+    elseif desc:find("sudoeste") or desc:find("southwest") or desc:find("so") or desc:find("sw") then
+        return "↗"
+    elseif desc:find("sueste") or desc:find("southeast") or desc:find("se") then
+        return "↖"
+    elseif desc:find("norte") or desc:find("north") then
+        return "↓"
+    elseif desc:find("sur") or desc:find("south") then
+        return "↑"
+    elseif desc:find("oeste") or desc:find("west") then
+        return "→"
+    elseif desc:find("leste") or desc:find("este") or desc:find("east") then
+        return "←"
+    end
+    return "•"
+end
+
+local function getWindColor(windSpeed: number, isDark: boolean): string
+    if windSpeed <= 0 then
+        return isDark and "#64748b" or "#94a3b8"
+    elseif windSpeed <= 15 then
+        return isDark and "#94a3b8" or "#475569"
+    elseif windSpeed <= 30 then
+        return isDark and "#38bdf8" or "#0284c7"
+    elseif windSpeed <= 45 then
+        return isDark and "#fbbf24" or "#d97706"
+    else
+        return isDark and "#f87171" or "#dc2626"
+    end
+end
+
+local function formatWindTooltip(windDesc: string?, windSpeed: number?, isEn: boolean): string
+    local speed = tonumber(windSpeed) or 0
+    local desc = windDesc or ""
+    local arrow = getWindArrow(desc, speed)
+    local windWord = isEn and "Wind" or "Vento"
+    if isEn and desc:lower():find("calm") then
+        desc = "Calm"
+    end
+    if desc ~= "" then
+        if speed > 0 then
+            return string.format("%s: %s %s (%d km/h)", windWord, arrow, desc, speed)
+        else
+            return string.format("%s: %s %s", windWord, arrow, desc)
+        end
+    else
+        return string.format("%s: %s %d km/h", windWord, arrow, speed)
+    end
+end
+
 render = function()
     local s = getScale()
     local rootFill, cardBgNorm, cardBgActive, commentaryBg = getThemeFills()
@@ -386,6 +459,12 @@ render = function()
     local hourly = weather.hourly or {}
     local hoursLimit = tonumber(noctalia.getConfig("hours_count")) or 48
 
+    local isDark = true
+    if noctalia.isDarkMode ~= nil then
+        isDark = (noctalia.isDarkMode() == true)
+    end
+    local isEn = (tr("ui.today", "Hoxe") == "Today")
+
     local rootChildren = {}
 
     -- ── 1. CABECEIRA PRINCIPAL ───────────────────────────────────────────────
@@ -397,32 +476,32 @@ render = function()
         sunset = sunset or s_time
     end
 
-    local makeSolarCard = function(iconName, iconColor, labelText, timeText)
+    local makeHeaderCard = function(iconName: string, iconColor: string, labelText: string, valueText: string, tooltipText: string?)
         return ui.row({
-            gap = math.max(8, math.floor(s.headerSunGap * 0.6)),
+            gap = math.max(6, math.floor(s.headerSunGap * 0.45)),
             align = "center",
-            paddingH = s.headerSunPadH,
-            paddingV = s.headerSunPadV,
+            paddingH = math.max(10, math.floor(s.headerSunPadH * 0.65)),
+            paddingV = math.max(5, math.floor(s.headerSunPadV * 0.7)),
             radius = 12,
             fill = cardBgNorm,
             border = "outline/0.25",
             borderWidth = 1,
-            tooltip = tr("ui.solar_tooltip", "Horarios solares: Orto (amencer) e Ocaso (solpor)"),
+            tooltip = tooltipText,
         }, {
             ui.glyph({
                 name = iconName,
-                size = s.headerSunIcon,
+                size = math.max(20, math.floor(s.headerSunIcon * 0.72)),
                 color = iconColor,
             }),
-            ui.column({ gap = 2 }, {
+            ui.column({ gap = 1 }, {
                 ui.label({
                     text = labelText,
-                    fontSize = s.headerSunText,
+                    fontSize = math.max(10, math.floor(s.headerSunText * 0.82)),
                     color = "on_surface_variant",
                 }),
                 ui.label({
-                    text = timeText,
-                    fontSize = s.headerSunTime,
+                    text = valueText,
+                    fontSize = math.max(13, math.floor(s.headerSunTime * 0.72)),
                     fontWeight = "bold",
                     color = "on_surface",
                 }),
@@ -430,12 +509,59 @@ render = function()
         })
     end
 
-    local solarCards = ui.row({ gap = 12, align = "center" }, {
-        makeSolarCard("weather-sunrise", "tertiary", tr("ui.sunrise", "Orto"), sunrise),
-        makeSolarCard("weather-sunset", "secondary", tr("ui.sunset", "Ocaso"), sunset),
+    local cardSunrise = makeHeaderCard("weather-sunrise", "tertiary", tr("ui.sunrise", "Orto"), sunrise, tr("ui.solar_tooltip", "Horarios solares: Orto (amencer) e Ocaso (solpor)"))
+    local cardSunset = makeHeaderCard("weather-sunset", "secondary", tr("ui.sunset", "Ocaso"), sunset, tr("ui.solar_tooltip", "Horarios solares: Orto (amencer) e Ocaso (solpor)"))
+
+    -- Vento actual
+    local curWindSpeed = tonumber(cur.windSpeed) or 0
+    local curWindDesc = cur.windDesc or ""
+    local curWindArrow = getWindArrow(curWindDesc, curWindSpeed)
+    local curWindColor = getWindColor(curWindSpeed, isDark)
+    local curWindLabel = tr("ui.wind_title", "Vento")
+    local curWindVal = curWindArrow .. " " .. tostring(curWindSpeed) .. " km/h"
+    local curWindTip = formatWindTooltip(curWindDesc, curWindSpeed, isEn)
+    local cardWind = makeHeaderCard("wind", curWindColor, curWindLabel, curWindVal, curWindTip)
+
+    -- Humidade actual (en tempo real desde a estación máis próxima)
+    local humVal = cur.humidity
+    local humText = (humVal ~= nil and (tostring(humVal) .. "%") or "--%")
+    local humTip = humVal and (tr("ui.humidity_tooltip", "Humidade relativa actual: ") .. tostring(humVal) .. "%" .. (cur.stationName and (" (" .. cur.stationName .. ")") or "")) or tr("ui.no_humidity", "Humidade non dispoñible")
+    local cardHumidity = makeHeaderCard("droplet", "secondary", tr("ui.humidity_title", "Humidade"), humText, humTip)
+
+    -- Calidade do aire actual (ICA)
+    local icaVal = tonumber(cur.ica or today.ica) or 0
+    local icaDesc = isEn and "Good" or "Boa"
+    local icaColor = isDark and "#34d399" or "#059669"
+    local icaFull = isEn and "Good (ICA 1)" or "Favorable (ICA 1)"
+    if icaVal >= 4 then
+        icaDesc = isEn and "V.Poor" or "Moi mala"
+        icaColor = isDark and "#f87171" or "#dc2626"
+        icaFull = isEn and "Very poor (ICA 4)" or "Moi mala (ICA 4)"
+    elseif icaVal >= 3 then
+        icaDesc = isEn and "Poor" or "Mala"
+        icaColor = isDark and "#fb923c" or "#ea580c"
+        icaFull = isEn and "Poor (ICA 3)" or "Mala (ICA 3)"
+    elseif icaVal >= 2 then
+        icaDesc = isEn and "Fair" or "Razoable"
+        icaColor = isDark and "#fbbf24" or "#d97706"
+        icaFull = isEn and "Fair (ICA 2)" or "Razoable (ICA 2)"
+    elseif icaVal == 0 then
+        icaDesc = "--"
+        icaColor = "on_surface_variant"
+        icaFull = isEn and "Not available" or "Non dispoñible"
+    end
+    local icaTip = tr("ui.air_quality_tooltip", "Calidade do aire: ") .. icaFull
+    local cardAirQuality = makeHeaderCard("leaf", icaColor, tr("ui.air_quality_title", "Calidade aire"), icaDesc, icaTip)
+
+    local headerCards = ui.row({ gap = math.max(6, math.floor(s.panelGap * 0.5)), align = "center" }, {
+        cardSunrise,
+        cardSunset,
+        cardWind,
+        cardHumidity,
+        cardAirQuality,
     })
 
-    local headerRow = ui.row({ gap = 16, align = "center" }, {
+    local headerRow = ui.row({ gap = 12, align = "center" }, {
         ui.glyph({
             name = cur.glyph or "cloud-sun",
             size = s.headerGlyph,
@@ -455,7 +581,7 @@ render = function()
             }),
         }),
         ui.spacer(),
-        solarCards,
+        headerCards,
         ui.spacer(),
         ui.column({ gap = 2, align = "end" }, {
             ui.row({ gap = 4, align = "center" }, {
@@ -502,7 +628,6 @@ render = function()
 
     -- Variables comúns para a predición horaria e diaria
     local currentHourSec = math.floor(os.time() / 3600) * 3600
-    local isEn = (tr("ui.today", "Hoxe") == "Today")
     local weekdaysShort = isEn and shared.WEEKDAYS_SHORT_EN or shared.WEEKDAYS_SHORT_GL
     local weekdaysFull = isEn and shared.WEEKDAYS_EN or shared.WEEKDAYS_GL
     local monthsTable = isEn and shared.MONTHS_FULL_EN or shared.MONTHS_FULL_GL
@@ -677,10 +802,12 @@ render = function()
         local atWord = isEn and "at" or "ás"
         local rainWord = isEn and "Rain" or "Choiva"
         local skyPart = (h.skyDesc and h.skyDesc ~= "") and (" · " .. h.skyDesc) or ""
-        local cardTooltip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%",
+        local windLine = formatWindTooltip(h.windDesc, h.windSpeed, isEn)
+        local cardTooltip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%\n%s",
             dayName, h.day or 0, atWord, h.time or "--:--",
             tonumber(h.temp) or 0, skyPart,
-            rainWord, tonumber(h.rainProb) or 0)
+            rainWord, tonumber(h.rainProb) or 0,
+            windLine)
 
         hourCards[#hourCards + 1] = ui.column({
             width = effectiveCardWidth,
@@ -719,6 +846,20 @@ render = function()
                     color = "secondary",
                 }),
             }),
+            ui.row({ gap = 2, align = "center" }, {
+                ui.label({
+                    text = getWindArrow(h.windDesc, tonumber(h.windSpeed) or 0),
+                    fontSize = s.hourlyRainIcon,
+                    fontWeight = "bold",
+                    color = getWindColor(tonumber(h.windSpeed) or 0, isDark),
+                }),
+                ui.label({
+                    text = tostring(h.windSpeed or 0),
+                    fontSize = s.hourlyRainText,
+                    fontWeight = "medium",
+                    color = isDark and "#cbd5e1" or "#475569",
+                }),
+            }),
         })
     end
 
@@ -741,7 +882,7 @@ render = function()
 
         rootChildren[#rootChildren + 1] = ui.row({ gap = 6, align = "center" }, {
             ui.glyph({ name = "calendar", size = s.sectionIcon, color = "primary" }),
-            ui.label({ text = tr("ui.daily_title", "Resumo dos vindeiros días"), fontSize = s.sectionTitle, fontWeight = "bold", color = "on_surface" }),
+            ui.label({ text = tr("ui.daily_title", isEn and "Forecast" or "Resumo dos vindeiros días"), fontSize = s.sectionTitle, fontWeight = "bold", color = "on_surface" }),
         })
 
         local isDark = true
@@ -868,18 +1009,23 @@ render = function()
                 local isCurrent = (slotTs == currentHourSec) or (currentHourSec >= slotTs and currentHourSec < slotTs + 3600)
                 local isMajor = (hNum % 6 == 0)
 
-                -- Tooltip estruturado en 3 liñas
-                local tTip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%",
+                local windVal = h and tonumber(h.windSpeed) or 0
+                local windDesc = h and h.windDesc or (dRef and dRef.windDesc or "")
+                local windLine = formatWindTooltip(windDesc, windVal, isEn)
+
+                -- Tooltip estruturado en 4 liñas (Data, Temp/Ceo, Choiva, Vento)
+                local tTip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%\n%s",
                     dayName, dayNum, atWord, hTime,
                     tempVal, skyPart,
-                    rainWord, rainProbVal)
+                    rainWord, rainProbVal,
+                    windLine)
 
                 -- Altura e deseño proporcional da barra de choiva
                 local maxBarH = 20
                 local barH = 2
                 local barW = 3
                 local barRadius = 1
-                local barColor = isDark and "#2a3244" or "#cbd5e1"
+                local barColor = isDark and "#334155" or "#94a3b8"
 
                 if rainProbVal > 0 then
                     barH = math.max(3, math.floor((rainProbVal / 100.0) * maxBarH))
@@ -895,7 +1041,7 @@ render = function()
                     barH = 5
                     barW = 2
                     barRadius = 1
-                    barColor = isDark and "#3b455c" or "#94a3b8"
+                    barColor = isDark and "#64748b" or "#475569"
                 end
 
                 local clickHandler = function()
@@ -955,6 +1101,9 @@ render = function()
                 slotTs: number,
                 glyph: string,
                 glyphColor: string,
+                windSpeed: number,
+                windDesc: string,
+                windArrow: string,
                 isStartOfDay: boolean,
                 tooltip: string,
                 onClick: () -> (),
@@ -1000,10 +1149,16 @@ render = function()
                 local dayName = weekdaysFull[wday] or ""
                 local hTime = h and h.time or string.format("%02d:00", hNum)
 
-                local tTip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%",
+                local windVal = h and tonumber(h.windSpeed) or 0
+                local windDesc = h and h.windDesc or (dRef and dRef.windDesc or "")
+                local windArrow = getWindArrow(windDesc, windVal)
+                local windLine = formatWindTooltip(windDesc, windVal, isEn)
+
+                local tTip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%\n%s",
                     dayName, dayNum, atWord, hTime,
                     tempVal, skyPart,
-                    rainWord, rainProbVal)
+                    rainWord, rainProbVal,
+                    windLine)
 
                 local lblClickHandler = function()
                     for oIdx, ph in ipairs(hourly) do
@@ -1026,6 +1181,9 @@ render = function()
                     slotTs = slotTs,
                     glyph = gName,
                     glyphColor = gColor,
+                    windSpeed = windVal,
+                    windDesc = windDesc,
+                    windArrow = windArrow,
                     isStartOfDay = isStartOfDay,
                     tooltip = tTip,
                     onClick = lblClickHandler,
@@ -1197,7 +1355,7 @@ render = function()
                     local nowTs = day0StartTs + nowIdx * 3600
                     local nowH = findHour(currentHourSec) or findHour(nowTs)
                     local curGName = (cur and cur.glyph) or (nowH and nowH.glyph) or "cloud-sun"
-                    local curGColor = (cur and cur.color) or (nowH and nowH.color) or grayGreen
+                    local curGColor = getTimelineGlyphColor(curGName, isDark)
 
                     local nowTemp = (cur and cur.temp) or (nowH and nowH.temp) or 0
                     local nowRain = (nowH and nowH.rainProb) or (weather.rainProb or 0)
@@ -1208,19 +1366,30 @@ render = function()
                     local nowDayName = weekdaysFull[nowWday] or ""
                     local nowTime = nowH and nowH.time or os.date("%H:%M", currentHourSec)
 
-                    local nowTooltip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%",
+                    local nowWindVal = (cur and tonumber(cur.windSpeed)) or (nowH and tonumber(nowH.windSpeed)) or 0
+                    local nowWindDesc = (cur and cur.windDesc) or (nowH and nowH.windDesc) or ""
+                    local nowWindArrow = getWindArrow(nowWindDesc, nowWindVal)
+                    local nowWindLine = formatWindTooltip(nowWindDesc, nowWindVal, isEn)
+
+                    local nowTooltip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%\n%s",
                         nowDayName, nowDayNum, atWord, nowTime,
                         nowTemp, nowSkyPart,
-                        rainWord, nowRain)
+                        rainWord, nowRain,
+                        nowWindLine)
+
+                    local nowWindLabel = (nowWindArrow == "•") and "0" or string.format("%s %d", nowWindArrow, nowWindVal)
+                    local nowWindColor = getWindColor(nowWindVal, isDark)
 
                     labelsList[#labelsList + 1] = {
                         x = padLeft + nowIdx * hourW,
                         text = isEn and "Now" or "Agora",
-                        fontSize = 8.5,
+                        fontSize = 9.5,
                         fontWeight = "bold",
-                        color = grayGreen,
+                        color = isDark and "#38bdf8" or "#0284c7",
                         glyph = curGName,
                         glyphColor = curGColor,
+                        windLabel = nowWindLabel,
+                        windColor = nowWindColor,
                         tooltip = nowTooltip,
                         onClick = function()
                             noctalia.state.set("hourly_offset", 0)
@@ -1231,18 +1400,23 @@ render = function()
                     local sData = slotInfo[item.k]
                     local isStartOfDay = sData.isStartOfDay
                     local lblColor = (isStartOfDay and item.k > 0)
-                        and (isDark and "#cbd5e1" or "#334155")
-                        or (isDark and "#94a3b8" or "#64748b")
+                        and (isDark and "#f8fafc" or "#0f172a")
+                        or (isDark and "#cbd5e1" or "#334155")
                     local lblWeight = (isStartOfDay and item.k > 0) and "bold" or "medium"
+
+                    local windLabel = (sData.windArrow == "•") and "0" or string.format("%s %d", sData.windArrow, sData.windSpeed)
+                    local windColor = getWindColor(sData.windSpeed, isDark)
 
                     labelsList[#labelsList + 1] = {
                         x = padLeft + item.k * hourW,
                         text = string.format("%02dh", sData.hNum),
-                        fontSize = 8.5,
+                        fontSize = 9.0,
                         fontWeight = lblWeight,
                         color = lblColor,
                         glyph = sData.glyph,
-                        glyphColor = sData.glyphColor,
+                        glyphColor = getTimelineGlyphColor(sData.glyph, isDark),
+                        windLabel = windLabel,
+                        windColor = windColor,
                         tooltip = sData.tooltip,
                         onClick = sData.onClick,
                     }
@@ -1273,8 +1447,14 @@ render = function()
                 }, {
                     ui.glyph({
                         name = lbl.glyph or "cloud",
-                        size = 13,
+                        size = 16,
                         color = lbl.glyphColor or lbl.color,
+                    }),
+                    ui.label({
+                        text = lbl.windLabel or "",
+                        fontSize = 8.5,
+                        fontWeight = "bold",
+                        color = lbl.windColor or "on_surface_variant",
                     }),
                     ui.label({
                         text = lbl.text,
@@ -1299,15 +1479,35 @@ render = function()
 
             local selectorHeader = ui.row({
                 paddingH = 16,
-                gap = 6,
+                gap = 8,
                 align = "center",
             }, {
-                ui.box({ width = 6, height = 6, radius = 3, fill = grayGreen }),
+                ui.row({ gap = 5, align = "center" }, {
+                    ui.box({ width = 6, height = 6, radius = 3, fill = isDark and "#38bdf8" or "#0284c7" }),
+                    ui.label({
+                        text = tr("ui.rain_probability", isEn and "Rain" or "Choiva"),
+                        fontSize = s.sectionSub,
+                        fontWeight = "bold",
+                        color = "on_surface",
+                    }),
+                }),
                 ui.label({
-                    text = tr("ui.rain_probability", isEn and "Rain probability" or "Probabilidade de chuvia"),
+                    text = "·",
                     fontSize = s.sectionSub,
-                    fontWeight = "bold",
-                    color = "on_surface",
+                    color = "outline",
+                }),
+                ui.row({ gap = 5, align = "center" }, {
+                    ui.glyph({
+                        name = "wind",
+                        size = 13,
+                        color = isDark and "#94a3b8" or "#475569",
+                    }),
+                    ui.label({
+                        text = isEn and "Wind (km/h)" or "Vento (km/h)",
+                        fontSize = s.sectionSub,
+                        fontWeight = "bold",
+                        color = "on_surface_variant",
+                    }),
                 }),
             })
 
@@ -1339,6 +1539,203 @@ render = function()
                 labelsRow,
             })
 
+            -- ── 3.2. BARRA HORIZONTAL DÍA / NOITE SINCRONIZADA ──
+            local barHeight = (s == SCALES["xlarge"]) and 20 or ((s == SCALES["large"]) and 18 or 16)
+            local sunGlyphSize = (s == SCALES["xlarge"]) and 12 or ((s == SCALES["large"]) and 11 or 10)
+            local leafGlyphSize = (s == SCALES["xlarge"]) and 11 or ((s == SCALES["large"]) and 10 or 9)
+            local moonGlyphSize = (s == SCALES["xlarge"]) and 11 or ((s == SCALES["large"]) and 10 or 9)
+            local barFontSize = (s == SCALES["xlarge"]) and 9.5 or ((s == SCALES["large"]) and 9.0 or 8.5)
+
+            local nightTrackFill = isDark and "#151b27" or "#334155"
+            local nightTrackBorder = isDark and "#232b3e" or "#475569"
+            local nightMoonColor = isDark and "#7dd3fc" or "#cbd5e1"
+            local dayBorderLine = isDark and "#252e42" or "#475569"
+
+            local dayFill = isDark and "#d97706" or "#fef08a"
+            local dayBorder = isDark and "#f59e0b" or "#eab308"
+            local dayTextColor = isDark and "#fef3c7" or "#78350f"
+            local dayIconColor = isDark and "#fde047" or "#b45309"
+            local daySepColor = isDark and "#fbbf24" or "#d97706"
+
+            local colW = availW / nDays
+            local trackChildren = {}
+
+            local function parseTimeToHours(timeStr: string?): number
+                if type(timeStr) ~= "string" then return 12.0 end
+                local h, m = timeStr:match("(%d+):(%d+)")
+                if h and m then
+                    return tonumber(h) + tonumber(m) / 60.0
+                end
+                return 12.0
+            end
+
+            for i = 1, nDays do
+                local d = dailyDays[i]
+                local dayMidTs = day0StartTs + (i - 1) * 86400 + 43200
+                local sRiseStr, sSetStr = shared.calcSolar(today.latitude, today.longitude, dayMidTs)
+                local riseH = parseTimeToHours(sRiseStr)
+                local setH = parseTimeToHours(sSetStr)
+
+                local n1W = (riseH / 24.0) * colW
+                local dayW = ((setH - riseH) / 24.0) * colW
+                local n2W = colW - n1W - dayW
+                if i < nDays then
+                    n2W = n2W - 1
+                end
+
+                local dayDurationH = setH - riseH
+                local dayDurHours = math.floor(dayDurationH)
+                local dayDurMins = math.floor((dayDurationH - dayDurHours) * 60 + 0.5)
+
+                local nightDurationH = 24.0 - dayDurationH
+                local nightDurHours = math.floor(nightDurationH)
+                local nightDurMins = math.floor((nightDurationH - nightDurHours) * 60 + 0.5)
+
+                local icaShort = isEn and "Good" or "Boa"
+                local icaFull = isEn and "Good (ICA 1)" or "Favorable (ICA 1)"
+                if d.ica and d.ica >= 4 then
+                    icaShort = isEn and "V.Poor" or "M.Mala"
+                    icaFull = isEn and "Very poor (ICA 4)" or "Moi mala (ICA 4)"
+                elseif d.ica and d.ica >= 3 then
+                    icaShort = isEn and "Poor" or "Mala"
+                    icaFull = isEn and "Poor (ICA 3)" or "Mala (ICA 3)"
+                elseif d.ica and d.ica >= 2 then
+                    icaShort = isEn and "Fair" or "Razoable"
+                    icaFull = isEn and "Fair (ICA 2)" or "Razoable (ICA 2)"
+                end
+
+                local uvRiskStr = ""
+                if d.uv and d.uv > 0 then
+                    if d.uv >= 11 then
+                        uvRiskStr = isEn and " (Extreme)" or " (Extremo)"
+                    elseif d.uv >= 8 then
+                        uvRiskStr = isEn and " (Very high)" or " (Moi alto)"
+                    elseif d.uv >= 6 then
+                        uvRiskStr = isEn and " (High)" or " (Alto)"
+                    elseif d.uv >= 3 then
+                        uvRiskStr = isEn and " (Moderate)" or " (Moderado)"
+                    else
+                        uvRiskStr = isEn and " (Low)" or " (Baixo)"
+                    end
+                end
+
+                local dayName = weekdaysFull[d.weekday] or (d.reach == 0 and tr("ui.today", "Hoxe") or (d.reach == 1 and tr("ui.tomorrow", "Mañá") or ""))
+                local monthName = monthsTable[d.month] or ""
+                local dateStr = (d.day and d.day > 0) and string.format("%d %s", d.day, monthName) or ""
+                local headerStr = (dateStr ~= "") and string.format("%s, %s", dayName, dateStr) or dayName
+
+                local dayTooltip = string.format("%s\n☀️ %s: %s → %s (%dh %02dm)\n🔆 %s: %s\n🍃 %s: %s",
+                    headerStr,
+                    isEn and "Daylight" or "Horas de sol", sRiseStr, sSetStr, dayDurHours, dayDurMins,
+                    isEn and "Max UV Index" or "Radiación UV máx", (d.uv and d.uv > 0) and (tostring(d.uv) .. uvRiskStr) or (isEn and "Not available" or "Non dispoñible"),
+                    isEn and "Air Quality" or "Calidade do aire", (d.ica and d.ica > 0) and icaFull or (isEn and "Not available" or "Non dispoñible"))
+
+                local nightTooltip = string.format("%s\n🌙 %s: %s → %s (%dh %02dm)\n🍃 %s: %s",
+                    headerStr,
+                    isEn and "Night hours" or "Horas de noite", sSetStr, sRiseStr, nightDurHours, nightDurMins,
+                    isEn and "Air Quality" or "Calidade do aire", (d.ica and d.ica > 0) and icaFull or (isEn and "Not available" or "Non dispoñible"))
+
+                local dayClickHandler = function()
+                    local targetOffset = math.max(0, math.min((i - 1) * 12, maxOffset))
+                    noctalia.state.set("hourly_offset", targetOffset)
+                    render()
+                end
+
+                local n1Children = {}
+                if n1W >= 30 then
+                    n1Children[#n1Children + 1] = ui.glyph({ name = "moon", size = moonGlyphSize, color = nightMoonColor })
+                end
+                trackChildren[#trackChildren + 1] = ui.row({
+                    width = n1W,
+                    height = barHeight,
+                    align = "center",
+                    justify = "center",
+                    tooltip = nightTooltip,
+                }, n1Children)
+
+                local dayChildren = {}
+                dayChildren[#dayChildren + 1] = ui.glyph({ name = "sun", size = sunGlyphSize, color = dayIconColor })
+                if d.uv and d.uv > 0 then
+                    dayChildren[#dayChildren + 1] = ui.label({
+                        text = "UV " .. tostring(d.uv),
+                        fontSize = barFontSize,
+                        fontWeight = "bold",
+                        color = dayTextColor,
+                    })
+                    if d.ica and d.ica > 0 then
+                        dayChildren[#dayChildren + 1] = ui.label({ text = "·", fontSize = barFontSize, color = daySepColor })
+                        dayChildren[#dayChildren + 1] = ui.glyph({ name = "leaf", size = leafGlyphSize, color = dayIconColor })
+                        dayChildren[#dayChildren + 1] = ui.label({
+                            text = icaShort,
+                            fontSize = barFontSize,
+                            fontWeight = "bold",
+                            color = dayTextColor,
+                        })
+                    end
+                else
+                    dayChildren[#dayChildren + 1] = ui.label({
+                        text = string.format("%s → %s", sRiseStr, sSetStr),
+                        fontSize = barFontSize,
+                        fontWeight = "medium",
+                        color = dayTextColor,
+                    })
+                end
+
+                trackChildren[#trackChildren + 1] = ui.row({
+                    width = dayW,
+                    height = barHeight - 2,
+                    radius = math.floor((barHeight - 2) / 2),
+                    fill = dayFill,
+                    border = dayBorder,
+                    borderWidth = 1,
+                    align = "center",
+                    justify = "center",
+                    gap = 5,
+                    tooltip = dayTooltip,
+                    onClick = dayClickHandler,
+                }, dayChildren)
+
+                local n2Children = {}
+                if n2W >= 30 then
+                    n2Children[#n2Children + 1] = ui.glyph({ name = "moon", size = moonGlyphSize, color = nightMoonColor })
+                end
+                trackChildren[#trackChildren + 1] = ui.row({
+                    width = n2W,
+                    height = barHeight,
+                    align = "center",
+                    justify = "center",
+                    tooltip = nightTooltip,
+                }, n2Children)
+
+                if i < nDays then
+                    trackChildren[#trackChildren + 1] = ui.box({
+                        width = 1,
+                        height = barHeight - 6,
+                        fill = dayBorderLine,
+                        radius = 0.5,
+                    })
+                end
+            end
+
+            local dayNightBar = ui.row({
+                width = s.chartWidth,
+                align = "center",
+                gap = 0,
+            }, {
+                ui.box({ width = padLeft, height = 1, fill = "#00000000" }),
+                ui.row({
+                    width = availW,
+                    height = barHeight,
+                    radius = math.floor(barHeight / 2),
+                    fill = nightTrackFill,
+                    border = nightTrackBorder,
+                    borderWidth = 1,
+                    align = "center",
+                    gap = 0,
+                }, trackChildren),
+                ui.box({ width = padRight, height = 1, fill = "#00000000" }),
+            })
+
             rootChildren[#rootChildren + 1] = ui.column({
                 width = s.chartWidth,
                 gap = 6,
@@ -1346,6 +1743,7 @@ render = function()
             }, {
                 chartWidget,
                 timelineCard,
+                dayNightBar,
             })
         else
             rootChildren[#rootChildren + 1] = chartWidget
@@ -1380,35 +1778,27 @@ render = function()
 
     local indicators = {}
 
-    -- Vento
-    indicators[#indicators + 1] = ui.row({ gap = 4, align = "center" }, {
-        ui.glyph({ name = "wind", size = s.footerIcon, color = "primary" }),
-        ui.label({ text = (cur.windDesc ~= "" and cur.windDesc or "Vento") .. " (" .. tostring(cur.windSpeed) .. " km/h)", fontSize = s.footerText, color = "on_surface_variant" }),
-    })
-
-    -- Calidade do aire (ICA)
-    if today.ica and today.ica > 0 then
-        local icaDesc = "Favorable"
-        local icaColor = "secondary"
-        if today.ica >= 4 then
-            icaDesc = "Moi mala"
-            icaColor = "error"
-        elseif today.ica >= 3 then
-            icaDesc = "Mala"
-            icaColor = "secondary"
-        end
-
-        indicators[#indicators + 1] = ui.row({ gap = 4, align = "center" }, {
-            ui.glyph({ name = "leaf", size = s.footerIcon, color = icaColor }),
-            ui.label({ text = "Calidade do aire: " .. icaDesc, fontSize = s.footerText, color = icaColor }),
-        })
-    end
-
     -- Índice UV
     if today.uv and today.uv > 0 then
         indicators[#indicators + 1] = ui.row({ gap = 4, align = "center" }, {
             ui.glyph({ name = "sun-high", size = s.footerIcon, color = "tertiary" }),
-            ui.label({ text = "Índice UV máx: " .. tostring(today.uv), fontSize = s.footerText, color = "on_surface_variant" }),
+            ui.label({ text = (isEn and "Max UV index: " or "Índice UV máx: ") .. tostring(today.uv), fontSize = s.footerText, color = "on_surface_variant" }),
+        })
+    end
+
+    -- Estación meteorolóxica máis próxima (para humidade real)
+    if cur.stationName and cur.stationName ~= "" then
+        indicators[#indicators + 1] = ui.row({ gap = 4, align = "center" }, {
+            ui.glyph({ name = "map-pin", size = s.footerIcon, color = "secondary" }),
+            ui.label({ text = (isEn and "Station: " or "Estación: ") .. cur.stationName, fontSize = s.footerText, color = "on_surface_variant" }),
+        })
+    end
+
+    -- Hora de actualización
+    if weather.updatedAt then
+        indicators[#indicators + 1] = ui.row({ gap = 4, align = "center" }, {
+            ui.glyph({ name = "clock", size = s.footerIcon, color = "on_surface_variant" }),
+            ui.label({ text = (isEn and "Updated: " or "Actualizado: ") .. tostring(weather.updatedAt), fontSize = s.footerText, color = "on_surface_variant" }),
         })
     end
 

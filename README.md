@@ -21,7 +21,14 @@ Plugin nativo para o shell de escritorio **Noctalia** (en Wayland / Hyprland) qu
     * Clic dereito para forzar unha actualización inmediata dos datos.
     * Roda do rato para desprazar a predición horaria hora a hora dende a propia barra.
 * **Panel Emerxente Completo (`panel`)**:
-  * **Cabeceira de condicións actuais**: Glifo de gran formato, descrición sinóptica, temperatura instantánea, temperaturas máxima/mínima da xornada e horarios de amencer e solpor con separadores visuais elegantes.
+  * **Cabeceira de condicións actuais**:
+    * Glifo de gran formato, concello e descrición sinóptica xeral.
+    * Bloque central con 5 tarxetas métricas homoxéneas:
+      * **Horarios solares**: Orto (amencer) e Ocaso (solpor) calculados astronomicamente polas coordenadas exactas do municipio.
+      * **Vento actual**: Frecha vectorial de orientación real de compás (`↑`, `↗`, `→`, `↘`, `↓`, `↙`, `←`, `↖`), velocidade instantánea en km/h e descrición oficial no *tooltip*.
+      * **Humidade relativa en tempo real (💧 %)**: Conexión directa coa rede de observación cada 10 minutos de MeteoGalicia (`ultimos10minEstacionsMeteo`), emparellando automaticamente coa estación meteorolóxica máis próxima ao concello (ex: CIS Ferrol para Fene).
+      * **Calidade do aire (ICA)**: Avaliación cualitativa actual (*Boa*, *Razoable*, *Mala*, *Moi mala*) con indicador cromático adaptado.
+    * Temperatura instantánea destacada con graos centígrados, rango diario de temperaturas mínima e máxima (`↓ mín° ↑ máx°`), e botóns de axustes e actualización inmediata.
   * **Predición horaria interactiva (ata 48 horas, opcional)**:
     * Carrusel con tarxetas horarias mostrando a hora, glifo, temperatura prevista e probabilidade de choiva (💧 %).
     * Navegación fluída por bloques de 12 horas (`0h-12h`, `12h-24h`, `24h-36h`, `36h-48h`) con frechas na cabeceira.
@@ -34,16 +41,18 @@ Plugin nativo para o shell de escritorio **Noctalia** (en Wayland / Hyprland) qu
     * **Indicador de vento compacto**: Integración na terceira liña da cabeceira de cada día (frecha con orientación real de compás e descrición de intensidade), cun espazado vertical optimizado (22-24px) que aproveita ao máximo o layout.
     * **Adaptación dinámica ao tema (claro e escuro)**: Detección automática do modo activo e da paleta do sistema (`isDarkMode`, `getColor`), con fondos de tarxeta, tipografía, aneis térmicos e iconas optimizados para un contraste e integración visual impecables tanto en tema escuro coma en tema claro.
     * Cabeceira integrada de cada día co nome do día e data (`Hoxe, 19 out`, `Mañá, 20 out`, etc.) combinando tipografía destacada e atenuada.
-  * **Timeline sincronizado de probabilidade de chuvia e cambios meteorolóxicos**:
-    * Situado discretamente ao pé do gráfico e sincronizado verticalmente ao 100% coas horas da curva horaria de temperaturas.
-    * **Barras de probabilidade de precipitación**: Columnas azuis con alturas proporcionais para cada hora das 96 horas de predición continua.
+  * **Timeline sincronizado de probabilidade de chuvia e vento (96 horas)**:
+    * Situado ao pé do gráfico e sincronizado verticalmente ao 100% coas horas da curva horaria de temperaturas.
+    * **Barras de probabilidade de precipitación**: Columnas azuis con alturas proporcionais para cada hora de predición continua.
+    * **Previsión horaria do vento integrada**: Frechas Unicode de dirección e velocidade en km/h con escala cromática de intensidade en cada columna horaria de referencia.
     * **Iconas contextuais nos cambios de tempo**: As iconas do ceo colócanse dinamicamente cando o estado meteorolóxico muda (inicio ou remate de chuvascos, chuvia, despexado, nubes e claros, néboas ou caída da noite), con priorización de fenómenos adversos e resolución intelixente de conflitos para evitar calquera solapamento.
     * **Marcador dinámico *Agora* (*Now*)**: Posicionamento en tempo real aliñado co fuso horario local.
     * **Demarcación de xornadas**: Indicadores de cambio de día (`00h`) en letra grosa para unha navegación temporal intuitiva.
-    * **Tooltip estruturado en 3 liñas**: Ao pasar o rato amosa o día e hora exacta, a temperatura con descrición do ceo, e a probabilidade de choiva (ex: `Luns, 19 ás 14:00 \n 18°C · Despexado \n Choiva: 25%`).
-    * **Interacción directa**: Clic en calquera hora do timeline sincroniza a predición horaria instantaneamente.
+    * **Tooltip estruturado en 4 liñas**: Ao pasar o rato amosa data e hora, temperatura con descrición do ceo, probabilidade de choiva e vento previsto (ex: `Luns, 19 out ás 14:00 \n 18°C · Nubes e Claros \n Choiva: 25% \n Vento: Nordés feble (10 km/h)`).
+    * **Barra diúrno/nocturna astronómica (`dayNightBar`)**: Situada xusto debaixo da tarxeta de choiva/vento e sincronizada ao píxel coas 96 horas, con cápsulas diúrnas douradas que presentan a radiación ultravioleta máxima (`☀️ UV`) e a calidade do aire (`🍃 ICA`), pistas nocturnas con símbolo lunar e separadores verticais a medianoite.
+    * **Interacción directa**: Clic en calquera hora do timeline ou da barra solar sincroniza a predición horaria instantaneamente.
   * **Comentario oficial**: Análise sinóptica redactada polos meteorólogos de MeteoGalicia sobre a evolución atmosférica en Galicia.
-  * **Indicadores ambientais**: Índice de Calidade do Aire (ICA) e Índice de Radiación Ultravioleta máximo (UV).
+  * **Pé de páxina informativo**: Índice UV máximo previsto da xornada, estación meteorolóxica de referencia empregada para as lecturas actuais e hora da última sincronización.
   * **Acceso directo**: Botón para abrir a predición do concello na web oficial de MeteoGalicia.
 * **Cero dependencias externas**: Desenvolvido 100% en Luau nativo usando as APIs asíncronas de Noctalia (`noctalia.http`, `noctalia.state`, `noctalia.ui`).
 
@@ -113,7 +122,8 @@ meteogalicia/
 ├── plugin.toml       # Manifesto do plugin, axustes e definición de compoñentes
 ├── bar.luau          # Widget da barra (cápsula, tooltip, eventos de clic e scroll)
 ├── panel.luau        # Panel emerxente interactivo (UI reactiva, navegación, atallos de teclado)
-├── service.luau      # Servizo en segundo plano (peticións HTTP a meteo2api, caché e estado)
+├── service.luau      # Servizo en segundo plano (peticións HTTP a meteo2api e observacións en tempo real)
+├── stations.luau     # Catálogo oficial de estacións meteorolóxicas e coordenadas para humidade en tempo real
 ├── shared.luau       # Mapeo de códigos MeteoGalicia, xerador de gráfico SVG e utilidades
 ├── translations/     # Internacionalización (gl.json en galego, en.json en inglés)
 └── LICENSE           # Licenza MIT
@@ -123,9 +133,10 @@ meteogalicia/
 
 ## API de MeteoGalicia
 
-Este proxecto emprega a API REST pública oficial da **Consellería de Medio Ambiente e Cambio Climático - Xunta de Galicia**:
-* **Servizo Numérico**: `getNumericForecastInfo` (predición horaria e datos modelizados).
-* **Servizo Sinóptico**: `getDailyForecastInfo` (predición xeral por concellos e comentarios dos predictores).
+Este proxecto emprega os servizos e APIs públicas oficiais de **MeteoGalicia** (Consellería de Medio Ambiente e Cambio Climático - Xunta de Galicia):
+* **Servizo Numérico**: `getNumericForecastInfo` (predición horaria e datos modelizados por concellos).
+* **Servizo Sinóptico**: `getDailyForecastInfo` (predición diaria xeral, avisos e comentarios oficiais dos meteorólogos).
+* **Rede de Observación en Tempo Real**: `ultimos10minEstacionsMeteo` (datos de estacións meteorolóxicas cada 10 minutos para humidade relativa real).
 * **Información Xeral**: [MeteoGalicia](https://www.meteogalicia.gal/).
 
 ---

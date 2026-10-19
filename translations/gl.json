@@ -61,5 +61,11 @@
   "tooltip.click_hint": "Preme para ver a predición detallada",
   "ui.hourly_track_title": "Previsión horaria (48h)",
   "ui.hourly_track_hint": "Pasa o rato polos puntos para ver hora, temperatura e choiva",
-  "ui.rain_probability": "Probabilidade de chuvia"
+  "ui.rain_probability": "Choiva",
+  "ui.wind_title": "Vento",
+  "ui.humidity_title": "Humidade",
+  "ui.air_quality_title": "Calidade aire",
+  "ui.air_quality_tooltip": "Calidade do aire: ",
+  "ui.humidity_tooltip": "Humidade relativa actual: ",
+  "ui.no_humidity": "Humidade non dispoñible"
 }

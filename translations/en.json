@@ -28,7 +28,7 @@
   "settings.panel_opacity.option.subtle": "Subtle transparency",
   "settings.panel_opacity.option.glass": "Translucent (Glass effect)",
   "ui.hourly_title": "Hourly",
-  "ui.daily_title": "Upcoming days",
+  "ui.daily_title": "Forecast",
   "ui.today": "Today",
   "ui.tomorrow": "Tomorrow",
   "ui.upcoming_hours": "Next %d hours",
@@ -61,5 +61,11 @@
   "tooltip.click_hint": "Click to view detailed forecast",
   "ui.hourly_track_title": "Hourly timeline (48h)",
   "ui.hourly_track_hint": "Hover over points to see time, temperature and rain",
-  "ui.rain_probability": "Rain probability"
+  "ui.rain_probability": "Rain",
+  "ui.wind_title": "Wind",
+  "ui.humidity_title": "Humidity",
+  "ui.air_quality_title": "Air Quality",
+  "ui.air_quality_tooltip": "Air Quality: ",
+  "ui.humidity_tooltip": "Current relative humidity: ",
+  "ui.no_humidity": "Humidity not available"
 }
