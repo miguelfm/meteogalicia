@@ -522,7 +522,11 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     local nowY = nil
     if showHourly and #hourlyList >= 2 then
         local day0StartTs = 0
-        if dailyDays[1] and dailyDays[1].year and dailyDays[1].year > 0 then
+        if #hourlyList > 0 and hourlyList[1].timestamp then
+            local firstTs = tonumber(hourlyList[1].timestamp) or 0
+            local firstH = tonumber(hourlyList[1].hourNum) or tonumber(os.date("%H", firstTs)) or 0
+            day0StartTs = firstTs - firstH * 3600
+        elseif dailyDays[1] and dailyDays[1].year and dailyDays[1].year > 0 then
             day0StartTs = os.time({
                 year = dailyDays[1].year,
                 month = dailyDays[1].month,
@@ -531,8 +535,6 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
                 min = 0,
                 sec = 0,
             })
-        else
-            day0StartTs = tonumber(hourlyList[1].timestamp) or 0
         end
 
         local hourlyPts: { ChartPoint } = {}

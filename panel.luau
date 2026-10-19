@@ -803,7 +803,11 @@ render = function()
             local rightSpacerW = padRight + halfHourW
 
             local day0StartTs = 0
-            if dailyDays[1] and dailyDays[1].year and dailyDays[1].year > 0 then
+            if #curveHours > 0 and curveHours[1].timestamp then
+                local firstTs = tonumber(curveHours[1].timestamp) or 0
+                local firstH = tonumber(curveHours[1].hourNum) or tonumber(os.date("%H", firstTs)) or 0
+                day0StartTs = firstTs - firstH * 3600
+            elseif dailyDays[1] and dailyDays[1].year and dailyDays[1].year > 0 then
                 day0StartTs = os.time({
                     year = dailyDays[1].year,
                     month = dailyDays[1].month,
@@ -813,7 +817,7 @@ render = function()
                     sec = 0,
                 })
             else
-                local firstTs = tonumber(curveHours[1].timestamp) or os.time()
+                local firstTs = tonumber(curveHours[1] and curveHours[1].timestamp) or os.time()
                 local tParts = os.date("*t", firstTs)
                 day0StartTs = os.time({ year = tParts.year, month = tParts.month, day = tParts.day, hour = 0, min = 0, sec = 0 })
             end
@@ -935,7 +939,7 @@ render = function()
             end
 
             -- Fila de etiquetas horarias con iconas do ceo e posicións exactas
-            local labelsList = {}
+            -- Detectar cambios meteorolóxicos para amosar iconas de xeito dinámico e contextual
             local nowIdx = nil
             if currentHourSec >= day0StartTs then
                 local diffH = math.floor((currentHourSec - day0StartTs) / 3600)
@@ -944,120 +948,305 @@ render = function()
                 end
             end
 
-            for k = 0, totalSlots - 1, 6 do
-                local isSuppressedByNow = (nowIdx ~= nil and math.abs(k - nowIdx) <= 2)
-                if not isSuppressedByNow then
-                    local hNum = k % 24
-                    local isStartOfDay = (hNum == 0)
-                    local lblColor = (isStartOfDay and k > 0)
-                        and (isDark and "#cbd5e1" or "#334155")
-                        or (isDark and "#94a3b8" or "#64748b")
-                    local lblWeight = (isStartOfDay and k > 0) and "bold" or "medium"
+            -- 1. Precalcular datos para cada franxa horaria
+            type SlotInfo = {
+                k: number,
+                hNum: number,
+                slotTs: number,
+                glyph: string,
+                glyphColor: string,
+                isStartOfDay: boolean,
+                tooltip: string,
+                onClick: () -> (),
+            }
+            local slotInfo: { [number]: SlotInfo } = {}
 
-                    local slotTs = day0StartTs + k * 3600
-                    local dayIdx = math.floor(k / 24) + 1
-                    local h = findHour(slotTs)
-                    local dRef = dailyDays[dayIdx]
+            for k = 0, totalSlots - 1 do
+                local hNum = k % 24
+                local isStartOfDay = (hNum == 0)
+                local slotTs = day0StartTs + k * 3600
+                local dayIdx = math.floor(k / 24) + 1
+                local h = findHour(slotTs)
+                local dRef = dailyDays[dayIdx]
 
-                    local gName = "cloud"
-                    local gColor = "on_surface_variant"
+                local gName = "cloud"
+                local gColor = "on_surface_variant"
 
-                    if h and h.glyph then
-                        gName = h.glyph
-                        gColor = h.color or (isDark and "#94a3b8" or "#64748b")
-                    elseif dRef then
-                        local dg = dRef.glyph or "cloud"
-                        local dc = dRef.color or "on_surface_variant"
-                        if hNum < 7 or hNum >= 22 then
-                            if dg == "sun" then
-                                dg = "moon"
-                                dc = "primary"
-                            elseif dg == "cloud-sun" then
-                                dg = "moon-stars"
-                                dc = "primary"
-                            end
+                if h and h.glyph then
+                    gName = h.glyph
+                    gColor = h.color or (isDark and "#94a3b8" or "#64748b")
+                elseif dRef then
+                    local dg = dRef.glyph or "cloud"
+                    local dc = dRef.color or "on_surface_variant"
+                    if hNum < 7 or hNum >= 22 then
+                        if dg == "sun" then
+                            dg = "moon"
+                            dc = "primary"
+                        elseif dg == "cloud-sun" then
+                            dg = "moon-stars"
+                            dc = "primary"
                         end
-                        gName = dg
-                        gColor = dc
                     end
+                    gName = dg
+                    gColor = dc
+                end
 
-                    local tempVal = h and tonumber(h.temp) or (dRef and tonumber(dRef.tempMin) or 0)
-                    local rainProbVal = h and tonumber(h.rainProb) or (dRef and tonumber(dRef.rainProb) or 0)
-                    local skyDesc = h and h.skyDesc or (dRef and dRef.skyDesc or "")
-                    local skyPart = (skyDesc ~= "") and (" · " .. skyDesc) or ""
-                    local wday = h and h.weekday or (dRef and dRef.weekday or 0)
-                    local dayNum = h and h.day or (dRef and dRef.day or 0)
-                    local dayName = weekdaysFull[wday] or ""
-                    local hTime = h and h.time or string.format("%02d:00", hNum)
+                local tempVal = h and tonumber(h.temp) or (dRef and tonumber(dRef.tempMin) or 0)
+                local rainProbVal = h and tonumber(h.rainProb) or (dRef and tonumber(dRef.rainProb) or 0)
+                local skyDesc = h and h.skyDesc or (dRef and dRef.skyDesc or "")
+                local skyPart = (skyDesc ~= "") and (" · " .. skyDesc) or ""
+                local wday = h and h.weekday or (dRef and dRef.weekday or 0)
+                local dayNum = h and h.day or (dRef and dRef.day or 0)
+                local dayName = weekdaysFull[wday] or ""
+                local hTime = h and h.time or string.format("%02d:00", hNum)
 
-                    local tTip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%",
-                        dayName, dayNum, atWord, hTime,
-                        tempVal, skyPart,
-                        rainWord, rainProbVal)
+                local tTip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%",
+                    dayName, dayNum, atWord, hTime,
+                    tempVal, skyPart,
+                    rainWord, rainProbVal)
 
-                    local lblClickHandler = function()
-                        for oIdx, ph in ipairs(hourly) do
-                            if ph.timestamp == slotTs then
-                                local newOffset = math.max(0, math.min(oIdx - 1, maxOffset))
-                                noctalia.state.set("hourly_offset", newOffset)
-                                render()
-                                return
-                            end
-                        end
-                        if slotTs > currentHourSec then
-                            noctalia.state.set("hourly_offset", maxOffset)
+                local lblClickHandler = function()
+                    for oIdx, ph in ipairs(hourly) do
+                        if ph.timestamp == slotTs then
+                            local newOffset = math.max(0, math.min(oIdx - 1, maxOffset))
+                            noctalia.state.set("hourly_offset", newOffset)
                             render()
+                            return
                         end
                     end
+                    if slotTs > currentHourSec then
+                        noctalia.state.set("hourly_offset", maxOffset)
+                        render()
+                    end
+                end
 
-                    labelsList[#labelsList + 1] = {
-                        x = padLeft + k * hourW,
-                        text = string.format("%02dh", hNum),
-                        fontSize = 8.5,
-                        fontWeight = lblWeight,
-                        color = lblColor,
-                        glyph = gName,
-                        glyphColor = gColor,
-                        tooltip = tTip,
-                        onClick = lblClickHandler,
+                slotInfo[k] = {
+                    k = k,
+                    hNum = hNum,
+                    slotTs = slotTs,
+                    glyph = gName,
+                    glyphColor = gColor,
+                    isStartOfDay = isStartOfDay,
+                    tooltip = tTip,
+                    onClick = lblClickHandler,
+                }
+            end
+
+            -- 2. Identificar intervalos continuos do mesmo estado do ceo (runs)
+            type RunItem = {
+                glyph: string,
+                startK: number,
+                endK: number,
+            }
+            local runs: { RunItem } = {}
+            local currGlyph = nil
+            local currStart = 0
+            for k = 0, totalSlots - 1 do
+                local g = slotInfo[k].glyph
+                if g ~= currGlyph then
+                    if currGlyph ~= nil then
+                        runs[#runs + 1] = { glyph = currGlyph, startK = currStart, endK = k - 1 }
+                    end
+                    currGlyph = g
+                    currStart = k
+                end
+            end
+            if currGlyph ~= nil then
+                runs[#runs + 1] = { glyph = currGlyph, startK = currStart, endK = totalSlots - 1 }
+            end
+
+            -- 3. Xerar candidatos con prioridade segundo a importancia meteorolóxica
+            type Candidate = {
+                priority: number,
+                k: number,
+                isNow: boolean,
+                runIdx: number,
+            }
+            local candidates: { Candidate } = {}
+
+            -- Candidato prioritario: Agora
+            if nowIdx ~= nil and nowIdx >= 0 and nowIdx < totalSlots then
+                candidates[#candidates + 1] = {
+                    priority = 1000,
+                    k = nowIdx,
+                    isNow = true,
+                    runIdx = -1,
+                }
+            end
+
+            -- Candidatos nos puntos de cambio de tempo
+            for rIdx, run in ipairs(runs) do
+                local g = run.glyph
+                local w = 60
+                if string.find(g, "storm") or string.find(g, "thunder") then
+                    w = 250
+                elseif string.find(g, "rain") or string.find(g, "snow") or string.find(g, "snowflake") then
+                    w = 200
+                elseif string.find(g, "sun") or string.find(g, "cloud") or string.find(g, "fog") then
+                    w = 100
+                end
+
+                candidates[#candidates + 1] = {
+                    priority = 50 + w,
+                    k = run.startK,
+                    isNow = false,
+                    runIdx = rIdx,
+                }
+                -- Se a franxa é longa e hai conflito co inicio, propoñer o seguinte punto coma alternativa
+                if run.endK > run.startK then
+                    candidates[#candidates + 1] = {
+                        priority = 45 + w,
+                        k = run.startK + 1,
+                        isNow = false,
+                        runIdx = rIdx,
                     }
                 end
             end
 
-            if nowIdx ~= nil then
-                local nowTs = day0StartTs + nowIdx * 3600
-                local nowH = findHour(currentHourSec) or findHour(nowTs)
-                local curGName = (cur and cur.glyph) or (nowH and nowH.glyph) or "cloud-sun"
-                local curGColor = (cur and cur.color) or (nowH and nowH.color) or grayGreen
+            -- Candidatos de cambio de día (00h)
+            for k = 1, totalSlots - 1 do
+                if slotInfo[k].hNum == 0 then
+                    candidates[#candidates + 1] = {
+                        priority = 110,
+                        k = k,
+                        isNow = false,
+                        runIdx = -2,
+                    }
+                end
+            end
 
-                local nowTemp = (cur and cur.temp) or (nowH and nowH.temp) or 0
-                local nowRain = (nowH and nowH.rainProb) or (weather.rainProb or 0)
-                local nowSky = (cur and cur.skyDesc) or (nowH and nowH.skyDesc) or ""
-                local nowSkyPart = (nowSky ~= "") and (" · " .. nowSky) or ""
-                local nowWday = nowH and nowH.weekday or tonumber(os.date("%w", currentHourSec)) or 0
-                local nowDayNum = nowH and nowH.day or tonumber(os.date("%d", currentHourSec)) or 0
-                local nowDayName = weekdaysFull[nowWday] or ""
-                local nowTime = nowH and nowH.time or os.date("%H:%M", currentHourSec)
+            table.sort(candidates, function(a, b)
+                return a.priority > b.priority
+            end)
 
-                local nowTooltip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%",
-                    nowDayName, nowDayNum, atWord, nowTime,
-                    nowTemp, nowSkyPart,
-                    rainWord, nowRain)
+            -- 4. Resolución de conflitos de espazo (mínimo 2 slots = ~26px de separación)
+            local minSlots = 2
+            local acceptedSlots: { [number]: boolean } = {}
+            local acceptedRuns: { [number]: boolean } = {}
+            local acceptedList: { Candidate } = {}
 
-                labelsList[#labelsList + 1] = {
-                    x = padLeft + nowIdx * hourW,
-                    text = isEn and "Now" or "Agora",
-                    fontSize = 8.5,
-                    fontWeight = "bold",
-                    color = grayGreen,
-                    glyph = curGName,
-                    glyphColor = curGColor,
-                    tooltip = nowTooltip,
-                    onClick = function()
-                        noctalia.state.set("hourly_offset", 0)
-                        render()
-                    end,
-                }
+            for _, cand in ipairs(candidates) do
+                if not (cand.runIdx > 0 and acceptedRuns[cand.runIdx]) then
+                    local conflict = false
+                    for ak, _ in pairs(acceptedSlots) do
+                        if math.abs(ak - cand.k) < minSlots then
+                            conflict = true
+                            break
+                        end
+                    end
+                    if not conflict then
+                        acceptedSlots[cand.k] = true
+                        if cand.runIdx > 0 then
+                            acceptedRuns[cand.runIdx] = true
+                        end
+                        acceptedList[#acceptedList + 1] = cand
+                    end
+                end
+            end
+
+            table.sort(acceptedList, function(a, b)
+                return a.k < b.k
+            end)
+
+            -- 5. Encher ocos longos (se hai >= 8 horas continuas sen ningún marcador)
+            local filledList: { Candidate } = {}
+            for _, item in ipairs(acceptedList) do
+                filledList[#filledList + 1] = item
+            end
+
+            local gapIdx = 1
+            while gapIdx < #filledList do
+                local k1 = filledList[gapIdx].k
+                local k2 = filledList[gapIdx + 1].k
+                if k2 - k1 >= 8 then
+                    local midIdeal = math.floor((k1 + k2) / 2)
+                    local bestK = nil
+                    local bestScore = -999
+                    for candK = k1 + minSlots, k2 - minSlots do
+                        local h = slotInfo[candK].hNum
+                        local score = 100 - math.abs(candK - midIdeal)
+                        if h % 6 == 0 then
+                            score = score + 50
+                        elseif h % 3 == 0 then
+                            score = score + 20
+                        end
+                        if score > bestScore then
+                            bestScore = score
+                            bestK = candK
+                        end
+                    end
+                    if bestK ~= nil then
+                        table.insert(filledList, gapIdx + 1, {
+                            priority = 30,
+                            k = bestK,
+                            isNow = false,
+                            runIdx = -3,
+                        })
+                    else
+                        gapIdx = gapIdx + 1
+                    end
+                else
+                    gapIdx = gapIdx + 1
+                end
+            end
+
+            -- 6. Construír a lista de etiquetas finais
+            local labelsList = {}
+            for _, item in ipairs(filledList) do
+                if item.isNow then
+                    local nowTs = day0StartTs + nowIdx * 3600
+                    local nowH = findHour(currentHourSec) or findHour(nowTs)
+                    local curGName = (cur and cur.glyph) or (nowH and nowH.glyph) or "cloud-sun"
+                    local curGColor = (cur and cur.color) or (nowH and nowH.color) or grayGreen
+
+                    local nowTemp = (cur and cur.temp) or (nowH and nowH.temp) or 0
+                    local nowRain = (nowH and nowH.rainProb) or (weather.rainProb or 0)
+                    local nowSky = (cur and cur.skyDesc) or (nowH and nowH.skyDesc) or ""
+                    local nowSkyPart = (nowSky ~= "") and (" · " .. nowSky) or ""
+                    local nowWday = nowH and nowH.weekday or tonumber(os.date("%w", currentHourSec)) or 0
+                    local nowDayNum = nowH and nowH.day or tonumber(os.date("%d", currentHourSec)) or 0
+                    local nowDayName = weekdaysFull[nowWday] or ""
+                    local nowTime = nowH and nowH.time or os.date("%H:%M", currentHourSec)
+
+                    local nowTooltip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%",
+                        nowDayName, nowDayNum, atWord, nowTime,
+                        nowTemp, nowSkyPart,
+                        rainWord, nowRain)
+
+                    labelsList[#labelsList + 1] = {
+                        x = padLeft + nowIdx * hourW,
+                        text = isEn and "Now" or "Agora",
+                        fontSize = 8.5,
+                        fontWeight = "bold",
+                        color = grayGreen,
+                        glyph = curGName,
+                        glyphColor = curGColor,
+                        tooltip = nowTooltip,
+                        onClick = function()
+                            noctalia.state.set("hourly_offset", 0)
+                            render()
+                        end,
+                    }
+                else
+                    local sData = slotInfo[item.k]
+                    local isStartOfDay = sData.isStartOfDay
+                    local lblColor = (isStartOfDay and item.k > 0)
+                        and (isDark and "#cbd5e1" or "#334155")
+                        or (isDark and "#94a3b8" or "#64748b")
+                    local lblWeight = (isStartOfDay and item.k > 0) and "bold" or "medium"
+
+                    labelsList[#labelsList + 1] = {
+                        x = padLeft + item.k * hourW,
+                        text = string.format("%02dh", sData.hNum),
+                        fontSize = 8.5,
+                        fontWeight = lblWeight,
+                        color = lblColor,
+                        glyph = sData.glyph,
+                        glyphColor = sData.glyphColor,
+                        tooltip = sData.tooltip,
+                        onClick = sData.onClick,
+                    }
+                end
             end
 
             table.sort(labelsList, function(a, b)
@@ -1065,7 +1254,7 @@ render = function()
             end)
 
             local labelWidgets = {}
-            local lblWidth = 34
+            local lblWidth = 26
             local currentX = 0
 
             for _, lbl in ipairs(labelsList) do
@@ -1094,7 +1283,7 @@ render = function()
                         color = lbl.color,
                     }),
                 })
-                currentX = targetLeft + lblWidth
+                currentX = currentX + gap + lblWidth
             end
 
             local finalGap = s.chartWidth - currentX
