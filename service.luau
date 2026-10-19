@@ -97,6 +97,7 @@ local function poll()
         local hourlyTomorrowUrl = shared.BASE_API .. "concellos/predicion-horaria?idConcello=" .. tostring(concelloId) .. "&data=" .. tomorrowParam .. "&idioma=gl"
         local hourlyDayAfterUrl = shared.BASE_API .. "concellos/predicion-horaria?idConcello=" .. tostring(concelloId) .. "&data=" .. dayAfterParam .. "&idioma=gl"
         local hourlyDay3Url = shared.BASE_API .. "concellos/predicion-horaria?idConcello=" .. tostring(concelloId) .. "&data=" .. day3Param .. "&idioma=gl"
+        local mediumTermUrl = shared.BASE_API .. "concellos/predicion-medio-prazo?idConcello=" .. tostring(concelloId) .. "&idioma=gl"
 
         noctalia.http({
             url = hourlyTodayUrl,
@@ -146,13 +147,24 @@ local function poll()
                         method = "GET",
                         headers = headers,
                     }, function(hourlyDay3Res)
-                        inFlight = false
-                        noctalia.state.set("weather_loading", false)
-
                         local hourlyDataDay3 = nil
                         if hourlyDay3Res and hourlyDay3Res.ok and hourlyDay3Res.status == 200 then
                             hourlyDataDay3 = noctalia.json.decode(hourlyDay3Res.body or "{}")
                         end
+
+                        -- Obter predición a medio prazo (para o 4º día)
+                        noctalia.http({
+                            url = mediumTermUrl,
+                            method = "GET",
+                            headers = headers,
+                        }, function(mediumTermRes)
+                            inFlight = false
+                            noctalia.state.set("weather_loading", false)
+
+                            local mediumTermData = nil
+                            if mediumTermRes and mediumTermRes.ok and mediumTermRes.status == 200 then
+                                mediumTermData = noctalia.json.decode(mediumTermRes.body or "{}")
+                            end
 
                 -- Procesar datos diarios
                 local shortTermList = dailyData.forecastDataShortTerm or {}
@@ -182,6 +194,8 @@ local function poll()
                 }
 
                 local dailyDays = {}
+                local seenDateKeys: { [string]: boolean } = {}
+
                 for idx, dEntry in ipairs(shortTermList) do
                     local reach = dEntry.reach or (idx - 1)
                     local sky = shared.getSky(dEntry.forecastSkyId)
@@ -197,6 +211,7 @@ local function poll()
                         local t = os.time({ year = y, month = m, day = d, hour = 12 })
                         wday = tonumber(os.date("%w", t)) or 0
                         dayTs = t
+                        seenDateKeys[string.format("%04d-%02d-%02d", y, m, d)] = true
                     end
                     local dayRise, daySet = shared.calcSolar(lat, lon, dayTs)
 
@@ -220,6 +235,51 @@ local function poll()
                         sunrise = dayRise,
                         sunset = daySet,
                     }
+                end
+
+                -- Integrar o 4º día (ata completar 4 días en total) dende a predición a medio prazo de MeteoGalicia
+                local mediumList = (mediumTermData and mediumTermData.forecastDataMediumTerm) or {}
+                for _, mEntry in ipairs(mediumList) do
+                    if #dailyDays >= 4 then
+                        break
+                    end
+                    local ms = tonumber(mEntry.date) or 0
+                    if ms > 0 then
+                        local sec = math.floor(ms / 1000)
+                        -- Engadir 12 horas para situarnos no mediodía local e evitar calquera desfasamento horario
+                        local middaySec = sec + 43200
+                        local dateInfo = os.date("*t", middaySec)
+                        local dateKey = string.format("%04d-%02d-%02d", dateInfo.year, dateInfo.month, dateInfo.day)
+
+                        if not seenDateKeys[dateKey] then
+                            seenDateKeys[dateKey] = true
+                            local reach = #dailyDays
+                            local sky, skyId, rainProb = shared.getSkyFromProbabilities(mEntry.forecastSkyProbability)
+                            local windDesc = shared.getWindTrend(mEntry.idWindForceTrend)
+                            local dayRise, daySet = shared.calcSolar(lat, lon, middaySec)
+
+                            dailyDays[#dailyDays + 1] = {
+                                reach = reach,
+                                day = dateInfo.day,
+                                month = dateInfo.month,
+                                year = dateInfo.year,
+                                weekday = tonumber(os.date("%w", middaySec)) or 0,
+                                tempMin = mEntry.minTemperature or 0,
+                                tempMax = mEntry.maxTemperature or 0,
+                                skyId = skyId,
+                                skyDesc = sky.desc,
+                                glyph = sky.glyph,
+                                color = sky.color,
+                                rainProb = rainProb,
+                                windDesc = windDesc,
+                                warningLevel = 0,
+                                uv = 0,
+                                ica = 0,
+                                sunrise = dayRise,
+                                sunset = daySet,
+                            }
+                        end
+                    end
                 end
 
                 -- Combinar horas de hoxe, mañá, pasado mañá e cuarto día
@@ -322,6 +382,7 @@ local function poll()
             end)
         end)
     end)
+end)
 end)
 end)
 end

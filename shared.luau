@@ -77,6 +77,32 @@ function shared.getSky(code: number?): SkyInfo
     return { glyph = "cloud", desc = "Descoñecido", color = "on_surface_variant" }
 end
 
+function shared.getSkyFromProbabilities(skyProb: any?): (SkyInfo, number, number)
+    local pClear = (skyProb and tonumber(skyProb.probabilityClear)) or 0
+    local pCloud = (skyProb and tonumber(skyProb.probabilityCloudy)) or 0
+    local pRain = (skyProb and tonumber(skyProb.probabilityRainy)) or 0
+
+    local skyId = 101
+    if pRain >= 65 then
+        skyId = 111 -- Chuvia
+    elseif pRain >= 40 then
+        if pClear >= 25 then
+            skyId = 108 -- Nubrado con chuvascos
+        else
+            skyId = 107 -- Chuvasco
+        end
+    elseif pCloud >= 65 then
+        skyId = 104 -- Nubrado
+    elseif pCloud >= 30 then
+        skyId = 103 -- Nubes e claros
+    else
+        skyId = 101 -- Despexado
+    end
+
+    local sky = shared.getSky(skyId)
+    return sky, skyId, pRain
+end
+
 function shared.cleanHtml(text: string?): string
     if type(text) ~= "string" then return "" end
     local clean = text:gsub("<br%s*/?>", "\n"):gsub("&lt;br%s*/?&gt;", "\n")
@@ -210,6 +236,51 @@ function shared.calcSolar(lat: number?, lon: number?, ts: number?): (string, str
     end
 
     return getTime(true), getTime(false)
+end
+
+local WIND_TREND_TABLE: { [number]: string } = {
+    [299] = "Calma",
+    [300] = "Variable",
+    [301] = "Norte feble",
+    [302] = "Nordés feble",
+    [303] = "Leste feble",
+    [304] = "Sueste feble",
+    [305] = "Sur feble",
+    [306] = "Sudoeste feble",
+    [307] = "Oeste feble",
+    [308] = "Noroeste feble",
+    [309] = "Norte moderado",
+    [310] = "Nordés moderado",
+    [311] = "Leste moderado",
+    [312] = "Sueste moderado",
+    [313] = "Sur moderado",
+    [314] = "Sudoeste moderado",
+    [315] = "Oeste moderado",
+    [316] = "Noroeste moderado",
+    [317] = "Variable moderado",
+    [318] = "Norte forte",
+    [319] = "Nordés forte",
+    [320] = "Leste forte",
+    [321] = "Sueste forte",
+    [322] = "Sur forte",
+    [323] = "Sudoeste forte",
+    [324] = "Oeste forte",
+    [325] = "Noroeste forte",
+    [326] = "Variable forte",
+    [327] = "Norte moi forte",
+    [328] = "Nordés moi forte",
+    [329] = "Leste moi forte",
+    [330] = "Sueste moi forte",
+    [331] = "Sur moi forte",
+    [332] = "Sudoeste moi forte",
+    [333] = "Oeste moi forte",
+    [334] = "Noroeste moi forte",
+    [335] = "Variable moi forte",
+}
+
+function shared.getWindTrend(windId: number?): string
+    if not windId then return "Calma" end
+    return WIND_TREND_TABLE[windId] or "Variable"
 end
 
 function shared.getWindAngle(windDesc: string?): number

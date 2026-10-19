@@ -28,7 +28,7 @@ Plugin nativo para o shell de escritorio **Noctalia** (en Wayland / Hyprland) qu
     * Separadores visuais discretos e data centrada no cambio de día para identificar comodamente a transición entre xornadas.
     * Desprazamento hora a hora ou por bloques mediante teclado e roda do rato.
   * **Gráfico interactivo dos vindeiros días**:
-    * Gráfico continuo xerado en SVG nativo coas curvas de temperatura máxima e mínima para toda a semana.
+    * Gráfico continuo xerado en SVG nativo coas curvas de temperatura máxima e mínima para 4 días completos (combinando a predición a curto e medio prazo oficial de MeteoGalicia).
     * **Adaptación dinámica ao tema (claro e escuro)**: Detección automática do modo activo e da paleta do sistema (`isDarkMode`, `getColor`), con fondos de tarxeta, tipografía, aneis térmicos e iconas optimizados para un contraste e integración visual impecables tanto en tema escuro coma en tema claro.
     * Cabeceira integrada de cada día co nome do día e data (`Hoxe, 19 out`, `Mañá, 20 out`, etc.) combinando tipografía destacada e atenuada.
     * Disposición horizontal compacta con glifo oficial, descrición do tempo e indicador de probabilidade de choiva con barra calibrada (gauge) de alto contraste.
