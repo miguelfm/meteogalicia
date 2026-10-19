@@ -178,6 +178,9 @@ shared.MONTHS_FULL_EN = {
 shared.DEFAULT_LAT = 43.475156
 shared.DEFAULT_LON = -8.167317
 
+shared.CHART_PAD_LEFT = 48
+shared.CHART_PAD_RIGHT = 52
+
 -- Cálculo astronómico oficial de orto (amencer) e ocaso (solpor) segundo algoritmo solar NOAA
 function shared.calcSolar(lat: number?, lon: number?, ts: number?): (string, string)
     local effectiveLat = lat or shared.DEFAULT_LAT
@@ -394,8 +397,8 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     local n = #dailyDays
     if n == 0 then return "" end
 
-    local padLeft = 48
-    local padRight = 52
+    local padLeft = shared.CHART_PAD_LEFT
+    local padRight = shared.CHART_PAD_RIGHT
     local availW = width - padLeft - padRight
     local colW = availW / n
     local xs = {}
@@ -617,10 +620,10 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         windArrow = isDark and "#94a3b8" or "#475569",
         windText = isDark and "#cbd5e1" or (colors.onSurface or "#334155"),
 
-        -- Curva horaria continua (48h/72h) en verde esmeralda elegante
-        hourlyStroke = isDark and "#34d399" or "#059669",
-        hourlyGlow = isDark and "#34d399" or "#059669",
-        nowDotFill = isDark and "#34d399" or "#059669",
+        -- Curva horaria continua (48h/72h) en gris con tonalidade verde suave
+        hourlyStroke = isDark and "#829f90" or "#4a6b63",
+        hourlyGlow = isDark and "#829f90" or "#4a6b63",
+        nowDotFill = isDark and "#829f90" or "#4a6b63",
         nowDotRing = isDark and "#141720" or (colors.surfaceVariant or "#e9efef"),
     }
 

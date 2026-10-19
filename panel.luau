@@ -62,7 +62,7 @@ type ScaleConfig = {
 
 local SCALES: { [string]: ScaleConfig } = {
     normal = {
-        panelPadding = 22,
+        panelPadding = 21,
         panelGap = 12,
         headerGlyph = 46,
         headerTown = 22,
@@ -82,7 +82,7 @@ local SCALES: { [string]: ScaleConfig } = {
         sectionIcon = 15,
         sectionTitle = 14,
         sectionSub = 11,
-        hourlyWidth = 92,
+        hourlyWidth = 104,
         hourlyPad = 6,
         hourlyGap = 5,
         hourlyTime = 11,
@@ -101,7 +101,7 @@ local SCALES: { [string]: ScaleConfig } = {
         dailyRainIcon = 11,
         dailyRainText = 11,
         dailyWindText = 10,
-        chartWidth = 1214,
+        chartWidth = 1358,
         chartHeight = 260,
         commentTitle = 13,
         commentText = 12,
@@ -111,7 +111,7 @@ local SCALES: { [string]: ScaleConfig } = {
         btnSize = "sm",
     },
     large = {
-        panelPadding = 22,
+        panelPadding = 21,
         panelGap = 14,
         headerGlyph = 58,
         headerTown = 28,
@@ -131,7 +131,7 @@ local SCALES: { [string]: ScaleConfig } = {
         sectionIcon = 18,
         sectionTitle = 17,
         sectionSub = 13,
-        hourlyWidth = 92,
+        hourlyWidth = 104,
         hourlyPad = 8,
         hourlyGap = 6,
         hourlyTime = 13,
@@ -150,7 +150,7 @@ local SCALES: { [string]: ScaleConfig } = {
         dailyRainIcon = 13,
         dailyRainText = 13,
         dailyWindText = 11,
-        chartWidth = 1214,
+        chartWidth = 1358,
         chartHeight = 280,
         commentTitle = 15,
         commentText = 14,
@@ -160,7 +160,7 @@ local SCALES: { [string]: ScaleConfig } = {
         btnSize = "md",
     },
     xlarge = {
-        panelPadding = 22,
+        panelPadding = 21,
         panelGap = 15,
         headerGlyph = 76,
         headerTown = 40,
@@ -180,7 +180,7 @@ local SCALES: { [string]: ScaleConfig } = {
         sectionIcon = 24,
         sectionTitle = 23,
         sectionSub = 17,
-        hourlyWidth = 92,
+        hourlyWidth = 104,
         hourlyPad = 10,
         hourlyGap = 8,
         hourlyTime = 17,
@@ -199,8 +199,8 @@ local SCALES: { [string]: ScaleConfig } = {
         dailyRainIcon = 17,
         dailyRainText = 17,
         dailyWindText = 15,
-        chartWidth = 1214,
-        chartHeight = 300,
+        chartWidth = 1358,
+        chartHeight = 310,
         commentTitle = 21,
         commentText = 18,
         commentPad = 16,
@@ -499,30 +499,37 @@ render = function()
     })
 
     rootChildren[#rootChildren + 1] = headerRow
-    rootChildren[#rootChildren + 1] = ui.separator()
 
-    -- ── 2. PREDICIÓN POR HORAS (ATA 48 HORAS) ────────────────────────────────
-    local hourlyOffset = tonumber(noctalia.state.get("hourly_offset")) or 0
-    local totalHourly = math.min(hoursLimit, #hourly)
-    local numBlocks = math.max(1, math.ceil(totalHourly / 12))
-    local maxOffset = math.max(0, totalHourly - 12)
-    if hourlyOffset > maxOffset then
-        hourlyOffset = maxOffset
-    end
-
+    -- Variables comúns para a predición horaria e diaria
+    local currentHourSec = math.floor(os.time() / 3600) * 3600
     local isEn = (tr("ui.today", "Hoxe") == "Today")
     local weekdaysShort = isEn and shared.WEEKDAYS_SHORT_EN or shared.WEEKDAYS_SHORT_GL
     local weekdaysFull = isEn and shared.WEEKDAYS_EN or shared.WEEKDAYS_GL
     local monthsTable = isEn and shared.MONTHS_FULL_EN or shared.MONTHS_FULL_GL
+    local totalHourly = math.min(hoursLimit, #hourly)
+    local maxOffset = math.max(0, totalHourly - 12)
 
-    local startIdx = hourlyOffset + 1
-    local endIdx = math.min(hourlyOffset + 12, totalHourly)
+    -- ── 2. PREDICIÓN POR HORAS (OPCIONAL, POR DEFECTO DESACTIVADA) ───────────
+    local showHourlyCards = noctalia.getConfig("show_hourly_cards")
+    if showHourlyCards == nil then showHourlyCards = false end
 
-    local startH = hourly[startIdx]
-    local endH = hourly[endIdx]
-    local daysCovered = ""
-    if startH and endH then
-        local w1 = weekdaysFull[startH.weekday] or (startH.isTomorrow and tr("ui.tomorrow", "Mañá") or tr("ui.today", "Hoxe"))
+    if showHourlyCards then
+        rootChildren[#rootChildren + 1] = ui.separator()
+
+        local hourlyOffset = tonumber(noctalia.state.get("hourly_offset")) or 0
+        local numBlocks = math.max(1, math.ceil(totalHourly / 12))
+        if hourlyOffset > maxOffset then
+            hourlyOffset = maxOffset
+        end
+
+        local startIdx = hourlyOffset + 1
+        local endIdx = math.min(hourlyOffset + 12, totalHourly)
+
+        local startH = hourly[startIdx]
+        local endH = hourly[endIdx]
+        local daysCovered = ""
+        if startH and endH then
+            local w1 = weekdaysFull[startH.weekday] or (startH.isTomorrow and tr("ui.tomorrow", "Mañá") or tr("ui.today", "Hoxe"))
         local w2 = weekdaysFull[endH.weekday] or (endH.isTomorrow and tr("ui.tomorrow", "Mañá") or tr("ui.today", "Hoxe"))
         local m1 = monthsTable[startH.month] or ""
 
@@ -613,7 +620,6 @@ render = function()
 
     -- Tarxetas horarias con separador visual no cambio de día
     local hourCards = {}
-    local currentHourSec = math.floor(os.time() / 3600) * 3600
 
     -- Comprobar se hai cambio de día dentro do tramo visible
     local hasDayChange = false
@@ -626,7 +632,7 @@ render = function()
         end
     end
 
-    -- Axuste da anchura de cada tarxeta para manter exactamente a grella de 1214px
+    -- Axuste da anchura de cada tarxeta para manter exactamente a grella de s.chartWidth
     local effectiveCardWidth = hasDayChange and (s.hourlyWidth - 2) or s.hourlyWidth
 
     for idx = startIdx, endIdx do
@@ -721,6 +727,7 @@ render = function()
         align = "center",
         justify = "center",
     }, hourCards)
+    end
 
     -- ── 3. RESUMO DIARIO (VINDEIROS DÍAS) ────────────────────────────────────
     local showDailySummary = noctalia.getConfig("show_daily_summary")
@@ -755,6 +762,8 @@ render = function()
             }
         end
 
+        local grayGreen = isDark and "#829f90" or "#4a6b63"
+
         local chartSvg = shared.generateDailyChartSvg(dailyDays, s.chartWidth, s.chartHeight, {
             isEn = isEn,
             isXlarge = (s == SCALES["xlarge"]),
@@ -774,38 +783,94 @@ render = function()
         noctalia.writeFile(chartPath, chartSvg)
         noctalia.writeFile("/tmp/meteogalicia_daily_trend.svg", chartSvg)
 
-        rootChildren[#rootChildren + 1] = ui.image({
+        local chartWidget = ui.image({
             path = chartPath,
             width = s.chartWidth,
             height = s.chartHeight,
         })
 
-        -- ── 3.1. SELECTOR DISCRETO AO PÉ DO GRÁFICO ─────────────────────────
+        -- ── 3.1. SELECTOR DISCRETO AO PÉ DO GRÁFICO (TIMELINE SINCRONIZADO) ──
         local curveHours = weather.hourlyCurve or weather.hourly or {}
-        if showDailyHourlyCurve and #curveHours > 0 then
-            local maxTrack = math.min(48, #curveHours)
+        if showDailyHourlyCurve and #dailyDays > 0 and #curveHours > 0 then
+            local padLeft = shared.CHART_PAD_LEFT or 48
+            local padRight = shared.CHART_PAD_RIGHT or 52
+            local nDays = #dailyDays
+            local availW = s.chartWidth - padLeft - padRight
+            local totalSlots = nDays * 24
+            local hourW = availW / totalSlots
+            local halfHourW = hourW / 2.0
+            local leftSpacerW = padLeft - halfHourW
+            local rightSpacerW = padRight + halfHourW
+
+            local day0StartTs = 0
+            if dailyDays[1] and dailyDays[1].year and dailyDays[1].year > 0 then
+                day0StartTs = os.time({
+                    year = dailyDays[1].year,
+                    month = dailyDays[1].month,
+                    day = dailyDays[1].day,
+                    hour = 0,
+                    min = 0,
+                    sec = 0,
+                })
+            else
+                local firstTs = tonumber(curveHours[1].timestamp) or os.time()
+                local tParts = os.date("*t", firstTs)
+                day0StartTs = os.time({ year = tParts.year, month = tParts.month, day = tParts.day, hour = 0, min = 0, sec = 0 })
+            end
+
+            -- Mapa de horas por timestamp con tolerancia de 30 minutos
+            local curveByTs: { [number]: any } = {}
+            for _, ch in ipairs(curveHours) do
+                local cTs = tonumber(ch.timestamp)
+                if cTs then
+                    curveByTs[cTs] = ch
+                end
+            end
+
+            local function findHour(targetTs: number): any
+                local exact = curveByTs[targetTs]
+                if exact then return exact end
+                for cTs, item in pairs(curveByTs) do
+                    if math.abs(cTs - targetTs) < 1800 then
+                        return item
+                    end
+                end
+                return nil
+            end
+
             local timelineSlots = {}
             local atWord = isEn and "at" or "ás"
             local rainWord = isEn and "Rain" or "Choiva"
 
-            for idx = 1, maxTrack do
-                local h = curveHours[idx]
-                local ts = tonumber(h.timestamp) or 0
-                local isCurrent = (ts == currentHourSec) or (currentHourSec >= ts and currentHourSec < ts + 3600)
-                local hNum = tonumber(h.hourNum) or tonumber(os.date("%H", ts)) or 0
-                local isMajor = (hNum % 6 == 0)
-                local isMid = (hNum % 3 == 0)
+            for slotIdx = 0, totalSlots - 1 do
+                local slotTs = day0StartTs + slotIdx * 3600
+                local dayIdx = math.floor(slotIdx / 24) + 1
+                local hNum = slotIdx % 24
+                local isStartOfDay = (hNum == 0)
 
-                local dayName = weekdaysFull[h.weekday] or (h.isTomorrow and tr("ui.tomorrow", "Mañá") or tr("ui.today", "Hoxe"))
-                local hTime = h.time or string.format("%02d:00", hNum)
-                local skyDesc = h.skyDesc or ""
+                local h = findHour(slotTs)
+                local dRef = dailyDays[dayIdx]
+
+                local tempVal = h and tonumber(h.temp) or (dRef and tonumber(dRef.tempMin) or 0)
+                local rainProbVal = h and tonumber(h.rainProb) or (dRef and tonumber(dRef.rainProb) or 0)
+                local skyDesc = h and h.skyDesc or (dRef and dRef.skyDesc or "")
                 local skyPart = (skyDesc ~= "") and (" · " .. skyDesc) or ""
-                local tTip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%",
-                    dayName, h.day or 0, atWord, hTime,
-                    tonumber(h.temp) or 0, skyPart,
-                    rainWord, tonumber(h.rainProb) or 0)
 
-                local rainProbVal = tonumber(h.rainProb) or 0
+                local wday = h and h.weekday or (dRef and dRef.weekday or 0)
+                local dayNum = h and h.day or (dRef and dRef.day or 0)
+                local dayName = weekdaysFull[wday] or (dRef and (dRef.reach == 0 and tr("ui.today", "Hoxe") or (dRef.reach == 1 and tr("ui.tomorrow", "Mañá") or ""))) or ""
+                local hTime = h and h.time or string.format("%02d:00", hNum)
+
+                local isCurrent = (slotTs == currentHourSec) or (currentHourSec >= slotTs and currentHourSec < slotTs + 3600)
+                local isMajor = (hNum % 6 == 0)
+
+                -- Tooltip estruturado en 3 liñas
+                local tTip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%",
+                    dayName, dayNum, atWord, hTime,
+                    tempVal, skyPart,
+                    rainWord, rainProbVal)
+
+                -- Altura e deseño proporcional da barra de choiva
                 local maxBarH = 20
                 local barH = 2
                 local barW = 3
@@ -814,43 +879,33 @@ render = function()
 
                 if rainProbVal > 0 then
                     barH = math.max(3, math.floor((rainProbVal / 100.0) * maxBarH))
-                    barW = 5.5
-                    barRadius = 1.8
+                    barW = 5.0
+                    barRadius = 1.6
                     barColor = isDark and "#38bdf8" or "#0284c7"
                 elseif isCurrent then
-                    barH = 3
+                    barH = 3.5
                     barW = 4
                     barRadius = 1.5
-                    barColor = isDark and "#34d399" or "#059669"
-                end
-
-                local labelWidget = nil
-                if isCurrent then
-                    labelWidget = ui.label({
-                        text = isEn and "Now" or "Agora",
-                        fontSize = 8.5,
-                        fontWeight = "bold",
-                        color = isDark and "#34d399" or "#059669",
-                    })
-                elseif isMajor then
-                    labelWidget = ui.label({
-                        text = string.format("%02dh", hNum),
-                        fontSize = 8.5,
-                        fontWeight = "medium",
-                        color = isDark and "#94a3b8" or "#64748b",
-                    })
-                else
-                    labelWidget = ui.box({ width = 1, height = 10, fill = "#00000000" })
+                    barColor = grayGreen
+                elseif isStartOfDay and slotIdx > 0 then
+                    barH = 5
+                    barW = 2
+                    barRadius = 1
+                    barColor = isDark and "#3b455c" or "#94a3b8"
                 end
 
                 local clickHandler = function()
                     for oIdx, ph in ipairs(hourly) do
-                        if ph.timestamp == ts then
+                        if ph.timestamp == slotTs then
                             local newOffset = math.max(0, math.min(oIdx - 1, maxOffset))
                             noctalia.state.set("hourly_offset", newOffset)
                             render()
-                            break
+                            return
                         end
+                    end
+                    if slotTs > currentHourSec then
+                        noctalia.state.set("hourly_offset", maxOffset)
+                        render()
                     end
                 end
 
@@ -869,45 +924,242 @@ render = function()
 
                 timelineSlots[#timelineSlots + 1] = ui.column({
                     flexGrow = 1,
-                    height = 34,
+                    height = maxBarH + 2,
                     align = "center",
                     justify = "end",
-                    gap = 3,
                     tooltip = tTip,
                     onClick = clickHandler,
                 }, {
                     rainCol,
-                    labelWidget,
                 })
             end
 
-            local selectorHeader = ui.row({ gap = 6, align = "center" }, {
-                ui.box({ width = 6, height = 6, radius = 3, fill = isDark and "#34d399" or "#059669" }),
+            -- Fila de etiquetas horarias con iconas do ceo e posicións exactas
+            local labelsList = {}
+            local nowIdx = nil
+            if currentHourSec >= day0StartTs then
+                local diffH = math.floor((currentHourSec - day0StartTs) / 3600)
+                if diffH >= 0 and diffH < totalSlots then
+                    nowIdx = diffH
+                end
+            end
+
+            for k = 0, totalSlots - 1, 6 do
+                local isSuppressedByNow = (nowIdx ~= nil and math.abs(k - nowIdx) <= 2)
+                if not isSuppressedByNow then
+                    local hNum = k % 24
+                    local isStartOfDay = (hNum == 0)
+                    local lblColor = (isStartOfDay and k > 0)
+                        and (isDark and "#cbd5e1" or "#334155")
+                        or (isDark and "#94a3b8" or "#64748b")
+                    local lblWeight = (isStartOfDay and k > 0) and "bold" or "medium"
+
+                    local slotTs = day0StartTs + k * 3600
+                    local dayIdx = math.floor(k / 24) + 1
+                    local h = findHour(slotTs)
+                    local dRef = dailyDays[dayIdx]
+
+                    local gName = "cloud"
+                    local gColor = "on_surface_variant"
+
+                    if h and h.glyph then
+                        gName = h.glyph
+                        gColor = h.color or (isDark and "#94a3b8" or "#64748b")
+                    elseif dRef then
+                        local dg = dRef.glyph or "cloud"
+                        local dc = dRef.color or "on_surface_variant"
+                        if hNum < 7 or hNum >= 22 then
+                            if dg == "sun" then
+                                dg = "moon"
+                                dc = "primary"
+                            elseif dg == "cloud-sun" then
+                                dg = "moon-stars"
+                                dc = "primary"
+                            end
+                        end
+                        gName = dg
+                        gColor = dc
+                    end
+
+                    local tempVal = h and tonumber(h.temp) or (dRef and tonumber(dRef.tempMin) or 0)
+                    local rainProbVal = h and tonumber(h.rainProb) or (dRef and tonumber(dRef.rainProb) or 0)
+                    local skyDesc = h and h.skyDesc or (dRef and dRef.skyDesc or "")
+                    local skyPart = (skyDesc ~= "") and (" · " .. skyDesc) or ""
+                    local wday = h and h.weekday or (dRef and dRef.weekday or 0)
+                    local dayNum = h and h.day or (dRef and dRef.day or 0)
+                    local dayName = weekdaysFull[wday] or ""
+                    local hTime = h and h.time or string.format("%02d:00", hNum)
+
+                    local tTip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%",
+                        dayName, dayNum, atWord, hTime,
+                        tempVal, skyPart,
+                        rainWord, rainProbVal)
+
+                    local lblClickHandler = function()
+                        for oIdx, ph in ipairs(hourly) do
+                            if ph.timestamp == slotTs then
+                                local newOffset = math.max(0, math.min(oIdx - 1, maxOffset))
+                                noctalia.state.set("hourly_offset", newOffset)
+                                render()
+                                return
+                            end
+                        end
+                        if slotTs > currentHourSec then
+                            noctalia.state.set("hourly_offset", maxOffset)
+                            render()
+                        end
+                    end
+
+                    labelsList[#labelsList + 1] = {
+                        x = padLeft + k * hourW,
+                        text = string.format("%02dh", hNum),
+                        fontSize = 8.5,
+                        fontWeight = lblWeight,
+                        color = lblColor,
+                        glyph = gName,
+                        glyphColor = gColor,
+                        tooltip = tTip,
+                        onClick = lblClickHandler,
+                    }
+                end
+            end
+
+            if nowIdx ~= nil then
+                local nowTs = day0StartTs + nowIdx * 3600
+                local nowH = findHour(currentHourSec) or findHour(nowTs)
+                local curGName = (cur and cur.glyph) or (nowH and nowH.glyph) or "cloud-sun"
+                local curGColor = (cur and cur.color) or (nowH and nowH.color) or grayGreen
+
+                local nowTemp = (cur and cur.temp) or (nowH and nowH.temp) or 0
+                local nowRain = (nowH and nowH.rainProb) or (weather.rainProb or 0)
+                local nowSky = (cur and cur.skyDesc) or (nowH and nowH.skyDesc) or ""
+                local nowSkyPart = (nowSky ~= "") and (" · " .. nowSky) or ""
+                local nowWday = nowH and nowH.weekday or tonumber(os.date("%w", currentHourSec)) or 0
+                local nowDayNum = nowH and nowH.day or tonumber(os.date("%d", currentHourSec)) or 0
+                local nowDayName = weekdaysFull[nowWday] or ""
+                local nowTime = nowH and nowH.time or os.date("%H:%M", currentHourSec)
+
+                local nowTooltip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%",
+                    nowDayName, nowDayNum, atWord, nowTime,
+                    nowTemp, nowSkyPart,
+                    rainWord, nowRain)
+
+                labelsList[#labelsList + 1] = {
+                    x = padLeft + nowIdx * hourW,
+                    text = isEn and "Now" or "Agora",
+                    fontSize = 8.5,
+                    fontWeight = "bold",
+                    color = grayGreen,
+                    glyph = curGName,
+                    glyphColor = curGColor,
+                    tooltip = nowTooltip,
+                    onClick = function()
+                        noctalia.state.set("hourly_offset", 0)
+                        render()
+                    end,
+                }
+            end
+
+            table.sort(labelsList, function(a, b)
+                return a.x < b.x
+            end)
+
+            local labelWidgets = {}
+            local lblWidth = 34
+            local currentX = 0
+
+            for _, lbl in ipairs(labelsList) do
+                local targetLeft = lbl.x - lblWidth / 2.0
+                local gap = math.max(0, targetLeft - currentX)
+                if gap > 0 then
+                    labelWidgets[#labelWidgets + 1] = ui.box({ width = gap, height = 1, fill = "#00000000" })
+                end
+                labelWidgets[#labelWidgets + 1] = ui.column({
+                    width = lblWidth,
+                    justify = "center",
+                    align = "center",
+                    gap = 2,
+                    tooltip = lbl.tooltip,
+                    onClick = lbl.onClick,
+                }, {
+                    ui.glyph({
+                        name = lbl.glyph or "cloud",
+                        size = 13,
+                        color = lbl.glyphColor or lbl.color,
+                    }),
+                    ui.label({
+                        text = lbl.text,
+                        fontSize = lbl.fontSize,
+                        fontWeight = lbl.fontWeight,
+                        color = lbl.color,
+                    }),
+                })
+                currentX = targetLeft + lblWidth
+            end
+
+            local finalGap = s.chartWidth - currentX
+            if finalGap > 0 then
+                labelWidgets[#labelWidgets + 1] = ui.box({ width = finalGap, height = 1, fill = "#00000000" })
+            end
+
+            local labelsRow = ui.row({
+                width = s.chartWidth,
+                align = "center",
+                gap = 0,
+            }, labelWidgets)
+
+            local selectorHeader = ui.row({
+                paddingH = 16,
+                gap = 6,
+                align = "center",
+            }, {
+                ui.box({ width = 6, height = 6, radius = 3, fill = grayGreen }),
                 ui.label({
-                    text = "Timeline",
+                    text = tr("ui.rain_probability", isEn and "Rain probability" or "Probabilidade de chuvia"),
                     fontSize = s.sectionSub,
                     fontWeight = "bold",
                     color = "on_surface",
                 }),
             })
 
-            rootChildren[#rootChildren + 1] = ui.column({
+            local timelineRow = ui.row({
                 width = s.chartWidth,
-                paddingH = 14,
+                align = "center",
+                gap = 0,
+            }, {
+                ui.box({ width = leftSpacerW, height = 1, fill = "#00000000" }),
+                ui.row({
+                    width = availW,
+                    align = "center",
+                    gap = 0,
+                }, timelineSlots),
+                ui.box({ width = rightSpacerW, height = 1, fill = "#00000000" }),
+            })
+
+            local timelineCard = ui.column({
+                width = s.chartWidth,
                 paddingV = 7,
                 radius = 10,
                 fill = isDark and "#141720" or (colors and colors.surfaceVariant or "#e9efef"),
                 border = isDark and "#252b3b" or (colors and colors.outline or "#cbd5e1"),
                 borderWidth = 1,
-                gap = 5,
+                gap = 4,
             }, {
                 selectorHeader,
-                ui.row({
-                    width = s.chartWidth - 28,
-                    align = "center",
-                    justify = "space_between",
-                }, timelineSlots),
+                timelineRow,
+                labelsRow,
             })
+
+            rootChildren[#rootChildren + 1] = ui.column({
+                width = s.chartWidth,
+                gap = 6,
+                align = "center",
+            }, {
+                chartWidget,
+                timelineCard,
+            })
+        else
+            rootChildren[#rootChildren + 1] = chartWidget
         end
     end
 

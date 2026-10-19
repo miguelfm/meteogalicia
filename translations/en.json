@@ -9,6 +9,8 @@
   "settings.show_town_name.description": "Displays the municipality name next to the temperature.",
   "settings.show_rain_prob.label": "Show rain probability",
   "settings.show_rain_prob.description": "Displays precipitation chance on the bar when greater than 0%.",
+  "settings.show_hourly_cards.label": "Show hourly cards in panel",
+  "settings.show_hourly_cards.description": "Displays the row of individual hourly cards (optional and disabled by default).",
   "settings.hours_count.label": "Hourly forecast entries",
   "settings.hours_count.description": "Number of upcoming hourly entries in the panel (up to 48 hours organized in 12h blocks).",
   "settings.show_daily_summary.label": "Show daily summary in panel",
@@ -58,5 +60,6 @@
   "tooltip.updated": "Updated",
   "tooltip.click_hint": "Click to view detailed forecast",
   "ui.hourly_track_title": "Hourly timeline (48h)",
-  "ui.hourly_track_hint": "Hover over points to see time, temperature and rain"
+  "ui.hourly_track_hint": "Hover over points to see time, temperature and rain",
+  "ui.rain_probability": "Rain probability"
 }

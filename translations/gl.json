@@ -9,6 +9,8 @@
   "settings.show_town_name.description": "Amosa o nome do concello ao carón da temperatura na barra.",
   "settings.show_rain_prob.label": "Amosar probabilidade de choiva",
   "settings.show_rain_prob.description": "Amosa a probabilidade de precipitación na barra se é maior do 0%.",
+  "settings.show_hourly_cards.label": "Amosar tarxetas horarias no panel",
+  "settings.show_hourly_cards.description": "Amosa a fila de tarxetas con cada hora individual (opcional e desactivado por defecto).",
   "settings.hours_count.label": "Horas a amosar no panel",
   "settings.hours_count.description": "Número de horas futuras a amosar na tira horaria do panel (ata 48 horas organizadas en bloques de 12h).",
   "settings.show_daily_summary.label": "Amosar resumo diario no panel",
@@ -58,5 +60,6 @@
   "tooltip.updated": "Actualizado",
   "tooltip.click_hint": "Preme para ver a predición detallada",
   "ui.hourly_track_title": "Previsión horaria (48h)",
-  "ui.hourly_track_hint": "Pasa o rato polos puntos para ver hora, temperatura e choiva"
+  "ui.hourly_track_hint": "Pasa o rato polos puntos para ver hora, temperatura e choiva",
+  "ui.rain_probability": "Probabilidade de chuvia"
 }

@@ -53,6 +53,13 @@ description_key = "settings.show_rain_prob.description"
 default = true
 
 [[setting]]
+key = "show_hourly_cards"
+type = "bool"
+label_key = "settings.show_hourly_cards.label"
+description_key = "settings.show_hourly_cards.description"
+default = false
+
+[[setting]]
 key = "hours_count"
 type = "int"
 label_key = "settings.hours_count.label"
@@ -116,8 +123,8 @@ entry = "bar.luau"
 [[panel]]
 id = "panel"
 entry = "panel.luau"
-width = 1260
-height = 1090
+width = 1400
+height = 1000
 placement = "attached"
 position = "auto"
 open_near_click = true
