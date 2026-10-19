@@ -729,14 +729,36 @@ render = function()
             ui.label({ text = tr("ui.daily_title", "Resumo dos vindeiros días"), fontSize = s.sectionTitle, fontWeight = "bold", color = "on_surface" }),
         })
 
+        local isDark = true
+        if noctalia.isDarkMode ~= nil then
+            isDark = (noctalia.isDarkMode() == true)
+        end
+
+        local colors = nil
+        if noctalia.getColor ~= nil then
+            colors = {
+                surface = noctalia.getColor("surface"),
+                surfaceVariant = noctalia.getColor("surface_variant"),
+                onSurface = noctalia.getColor("on_surface"),
+                onSurfaceVariant = noctalia.getColor("on_surface_variant"),
+                outline = noctalia.getColor("outline"),
+                primary = noctalia.getColor("primary"),
+                secondary = noctalia.getColor("secondary"),
+            }
+        end
+
         local chartSvg = shared.generateDailyChartSvg(dailyDays, s.chartWidth, s.chartHeight, {
             isEn = isEn,
             isXlarge = (s == SCALES["xlarge"]),
             todayLabel = tr("ui.today", "Hoxe"),
             tomorrowLabel = tr("ui.tomorrow", "Mañá"),
+            isDark = isDark,
+            colors = colors,
         })
-        local chartPath = "/tmp/meteogalicia_daily_trend.svg"
+        local themeSuffix = isDark and "dark" or "light"
+        local chartPath = string.format("/tmp/meteogalicia_daily_trend_%s.svg", themeSuffix)
         noctalia.writeFile(chartPath, chartSvg)
+        noctalia.writeFile("/tmp/meteogalicia_daily_trend.svg", chartSvg)
 
         rootChildren[#rootChildren + 1] = ui.image({
             path = chartPath,

@@ -257,50 +257,58 @@ local function buildSmoothBezierPath(pts: { ChartPoint }): string
     return table.concat(parts)
 end
 
-function shared.renderWeatherSvgIcon(glyph: string, cx: number, cy: number): string
+function shared.renderWeatherSvgIcon(glyph: string, cx: number, cy: number, isDark: boolean?): string
+    if isDark == nil then isDark = true end
     local g = (glyph or "cloud"):lower()
+    local cloudColor = isDark and "#94a3b8" or "#64748b"
+    local rainColor = isDark and "#38bdf8" or "#0284c7"
+    local snowColor = isDark and "#bae6fd" or "#0284c7"
+    local sunColor = "#f59e0b"
+    local lightningColor = "#eab308"
+    local fogLineColor = isDark and "#94a3b8" or "#64748b"
+
     if g:find("storm") then
         return string.format([[<g transform="translate(%.1f, %.1f)">
-          <path d="M 6 15 A 6 6 0 0 1 11 7 A 8 8 0 0 1 22 9 A 6 6 0 0 1 24 15 Z" fill="#94a3b8"/>
-          <path d="M 15 15 L 12 21 L 16 21 L 13 27" fill="none" stroke="#eab308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </g>]], cx - 14, cy - 12)
+          <path d="M 6 15 A 6 6 0 0 1 11 7 A 8 8 0 0 1 22 9 A 6 6 0 0 1 24 15 Z" fill="%s"/>
+          <path d="M 15 15 L 12 21 L 16 21 L 13 27" fill="none" stroke="%s" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>]], cx - 14, cy - 12, cloudColor, lightningColor)
     elseif g:find("rain") then
         return string.format([[<g transform="translate(%.1f, %.1f)">
-          <path d="M 6 15 A 6 6 0 0 1 11 7 A 8 8 0 0 1 22 9 A 6 6 0 0 1 24 15 Z" fill="#94a3b8"/>
-          <line x1="9" y1="18" x2="7" y2="23" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/>
-          <line x1="15" y1="18" x2="13" y2="23" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/>
-          <line x1="21" y1="18" x2="19" y2="23" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/>
-        </g>]], cx - 14, cy - 12)
+          <path d="M 6 15 A 6 6 0 0 1 11 7 A 8 8 0 0 1 22 9 A 6 6 0 0 1 24 15 Z" fill="%s"/>
+          <line x1="9" y1="18" x2="7" y2="23" stroke="%s" stroke-width="2" stroke-linecap="round"/>
+          <line x1="15" y1="18" x2="13" y2="23" stroke="%s" stroke-width="2" stroke-linecap="round"/>
+          <line x1="21" y1="18" x2="19" y2="23" stroke="%s" stroke-width="2" stroke-linecap="round"/>
+        </g>]], cx - 14, cy - 12, cloudColor, rainColor, rainColor, rainColor)
     elseif g:find("snow") then
         return string.format([[<g transform="translate(%.1f, %.1f)">
-          <path d="M 6 15 A 6 6 0 0 1 11 7 A 8 8 0 0 1 22 9 A 6 6 0 0 1 24 15 Z" fill="#94a3b8"/>
-          <circle cx="9" cy="20" r="1.5" fill="#bae6fd"/>
-          <circle cx="15" cy="22" r="1.5" fill="#bae6fd"/>
-          <circle cx="21" cy="20" r="1.5" fill="#bae6fd"/>
-        </g>]], cx - 14, cy - 12)
+          <path d="M 6 15 A 6 6 0 0 1 11 7 A 8 8 0 0 1 22 9 A 6 6 0 0 1 24 15 Z" fill="%s"/>
+          <circle cx="9" cy="20" r="1.5" fill="%s"/>
+          <circle cx="15" cy="22" r="1.5" fill="%s"/>
+          <circle cx="21" cy="20" r="1.5" fill="%s"/>
+        </g>]], cx - 14, cy - 12, cloudColor, snowColor, snowColor, snowColor)
     elseif g:find("fog") then
         return string.format([[<g transform="translate(%.1f, %.1f)">
-          <path d="M 6 13 A 6 6 0 0 1 11 6 A 8 8 0 0 1 22 8 A 6 6 0 0 1 24 13 Z" fill="#94a3b8"/>
-          <line x1="6" y1="17" x2="24" y2="17" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
-          <line x1="8" y1="21" x2="22" y2="21" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
-        </g>]], cx - 14, cy - 12)
+          <path d="M 6 13 A 6 6 0 0 1 11 6 A 8 8 0 0 1 22 8 A 6 6 0 0 1 24 13 Z" fill="%s"/>
+          <line x1="6" y1="17" x2="24" y2="17" stroke="%s" stroke-width="2" stroke-linecap="round"/>
+          <line x1="8" y1="21" x2="22" y2="21" stroke="%s" stroke-width="2" stroke-linecap="round"/>
+        </g>]], cx - 14, cy - 12, cloudColor, fogLineColor, fogLineColor)
     elseif g:find("cloud") and g:find("sun") then
         return string.format([[<g transform="translate(%.1f, %.1f)">
-          <circle cx="20" cy="8" r="5" fill="#f59e0b"/>
-          <line x1="20" y1="1" x2="20" y2="2" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
-          <line x1="26" y1="8" x2="27" y2="8" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
-          <line x1="25" y1="3" x2="24" y2="4" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
-          <path d="M 5 17 A 6 6 0 0 1 10 9 A 8 8 0 0 1 21 11 A 6 6 0 0 1 23 17 Z" fill="#94a3b8"/>
-        </g>]], cx - 14, cy - 12)
+          <circle cx="20" cy="8" r="5" fill="%s"/>
+          <line x1="20" y1="1" x2="20" y2="2" stroke="%s" stroke-width="2" stroke-linecap="round"/>
+          <line x1="26" y1="8" x2="27" y2="8" stroke="%s" stroke-width="2" stroke-linecap="round"/>
+          <line x1="25" y1="3" x2="24" y2="4" stroke="%s" stroke-width="2" stroke-linecap="round"/>
+          <path d="M 5 17 A 6 6 0 0 1 10 9 A 8 8 0 0 1 21 11 A 6 6 0 0 1 23 17 Z" fill="%s"/>
+        </g>]], cx - 14, cy - 12, sunColor, sunColor, sunColor, sunColor, cloudColor)
     elseif g:find("sun") then
         return string.format([[<g transform="translate(%.1f, %.1f)">
-          <circle cx="12" cy="12" r="6" fill="#f59e0b"/>
-          <path d="M12 1v3M12 20v3M1 12h3M20 12h3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
-        </g>]], cx - 12, cy - 12)
+          <circle cx="12" cy="12" r="6" fill="%s"/>
+          <path d="M12 1v3M12 20v3M1 12h3M20 12h3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="%s" stroke-width="2" stroke-linecap="round"/>
+        </g>]], cx - 12, cy - 12, sunColor, sunColor)
     else
         return string.format([[<g transform="translate(%.1f, %.1f)">
-          <path d="M 6 18 A 6 6 0 0 1 11 10 A 8 8 0 0 1 22 12 A 6 6 0 0 1 24 18 Z" fill="#94a3b8"/>
-        </g>]], cx - 14, cy - 12)
+          <path d="M 6 18 A 6 6 0 0 1 11 10 A 8 8 0 0 1 22 12 A 6 6 0 0 1 24 18 Z" fill="%s"/>
+        </g>]], cx - 14, cy - 12, cloudColor)
     end
 end
 
@@ -366,12 +374,64 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     local revMinCurve = buildSmoothBezierPath(revMinPts)
     local areaPath = maxCurve .. string.format(" L %.1f %.1f ", minPts[#minPts].x, minPts[#minPts].y) .. string.sub(revMinCurve, 2) .. " Z"
 
+    local isDark = true
+    if opts and opts.isDark ~= nil then
+        isDark = (opts.isDark == true)
+    elseif noctalia and noctalia.isDarkMode then
+        isDark = (noctalia.isDarkMode() == true)
+    end
+    local colors = (opts and opts.colors) or {}
+
+    -- Paleta de cores adaptativa segundo o modo de tema (escuro vs claro)
+    local theme = {
+        cardBg = isDark and "#141720" or (colors.surfaceVariant or "#e9efef"),
+        cardBorder = isDark and "#252b3b" or (colors.outline or "#cbd5e1"),
+        daySep = isDark and "#1c2230" or "#e2e8f0",
+        windSep = isDark and "#222838" or "#e2e8f0",
+        gridLine = isDark and "#222838" or "#e2e8f0",
+        gridText = isDark and "#64748b" or (colors.onSurfaceVariant or "#64748b"),
+        axisTitle = isDark and "#ff9800" or "#d97706",
+
+        -- Curva térmica máxima
+        maxTempStroke = isDark and "#ff7849" or "#ea580c",
+        maxTempPointFill = isDark and "#141720" or (colors.surfaceVariant or "#e9efef"),
+        maxTempText = isDark and "#ff7849" or "#c2410c",
+
+        -- Curva térmica mínima
+        minTempStroke = isDark and "#38bdf8" or "#0284c7",
+        minTempPointFill = isDark and "#141720" or (colors.surfaceVariant or "#e9efef"),
+        minTempText = isDark and "#38bdf8" or "#0369a1",
+
+        -- Degradado térmico
+        tempAreaStop0 = isDark and "#ff7849" or "#ea580c",
+        tempAreaStop0Op = isDark and "0.32" or "0.22",
+        tempAreaStop1 = isDark and "#38bdf8" or "#0284c7",
+        tempAreaStop1Op = isDark and "0.10" or "0.08",
+
+        -- Cabeceiras de día
+        todayTitle = isDark and "#ff9800" or "#d97706",
+        dayTitle = isDark and "#f8fafc" or (colors.onSurface or "#0f172a"),
+        dateSub = isDark and "#94a3b8" or (colors.onSurfaceVariant or "#64748b"),
+        skyDesc = isDark and "#f1f5f9" or (colors.onSurface or "#1e293b"),
+
+        -- Choiva
+        rainText = isDark and "#38bdf8" or "#0284c7",
+        rainDrop = isDark and "#38bdf8" or "#0284c7",
+        rainGaugeBg = isDark and "#1e293b" or "#cbd5e1",
+
+        -- Vento
+        windCircleFill = isDark and "#1e2330" or (colors.surface or "#f4fbfa"),
+        windCircleStroke = isDark and "#222838" or "#cbd5e1",
+        windArrow = isDark and "#94a3b8" or "#475569",
+        windText = isDark and "#cbd5e1" or (colors.onSurface or "#334155"),
+    }
+
     local svgParts = {}
     svgParts[#svgParts + 1] = string.format([[<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d" font-family="system-ui, -apple-system, sans-serif">
   <defs>
     <linearGradient id="tempArea" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%%" stop-color="#ff7849" stop-opacity="0.32"/>
-      <stop offset="100%%" stop-color="#38bdf8" stop-opacity="0.10"/>
+      <stop offset="0%%" stop-color="%s" stop-opacity="%s"/>
+      <stop offset="100%%" stop-color="%s" stop-opacity="%s"/>
     </linearGradient>
     <linearGradient id="rainGaugeGrad" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%%" stop-color="#0284c7"/>
@@ -380,13 +440,15 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
   </defs>
 
   <!-- Fondo da tarxeta -->
-  <rect width="%d" height="%d" rx="14" fill="#141720" stroke="#252b3b" stroke-width="1.2"/>
-]], width, height, width, height, width, height)
+  <rect width="%d" height="%d" rx="14" fill="%s" stroke="%s" stroke-width="1.2"/>
+]], width, height, width, height,
+    theme.tempAreaStop0, theme.tempAreaStop0Op, theme.tempAreaStop1, theme.tempAreaStop1Op,
+    width, height, theme.cardBg, theme.cardBorder)
 
     -- Liñas de separación entre días
     for i = 1, n - 1 do
         local sepX = padLeft + colW * i
-        svgParts[#svgParts + 1] = string.format('  <line x1="%.1f" y1="12" x2="%.1f" y2="%d" stroke="#1c2230" stroke-width="1"/>\n', sepX, sepX, height - 12)
+        svgParts[#svgParts + 1] = string.format('  <line x1="%.1f" y1="12" x2="%.1f" y2="%d" stroke="%s" stroke-width="1"/>\n', sepX, sepX, height - 12, theme.daySep)
     end
 
     local isXlarge = (opts and opts.isXlarge == true)
@@ -399,23 +461,24 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     local axisTitleSize = isXlarge and 12 or 10
 
     -- Eixo esquerdo: Temperatura (°C)
-    svgParts[#svgParts + 1] = string.format('  <text x="%d" y="%d" fill="#ff9800" font-size="%d" font-weight="bold" text-anchor="end">°C</text>\n', padLeft - 10, chartTop - 8, axisTitleSize)
+    svgParts[#svgParts + 1] = string.format('  <text x="%d" y="%d" fill="%s" font-size="%d" font-weight="bold" text-anchor="end">°C</text>\n', padLeft - 10, chartTop - 8, theme.axisTitle, axisTitleSize)
     local gridTemps = { math.floor(tMin + 2), math.floor((tMin + tMax) / 2), math.floor(tMax - 2) }
     for _, tVal in ipairs(gridTemps) do
         local gy = yTemp(tVal)
         svgParts[#svgParts + 1] = string.format([[
-    <line x1="%d" y1="%.1f" x2="%d" y2="%.1f" stroke="#222838" stroke-width="1" stroke-dasharray="4,4"/>
-    <text x="%d" y="%.1f" fill="#64748b" font-size="%d" font-weight="500" text-anchor="end">%d°</text>
-]], padLeft - 6, gy, width - padRight + 6, gy, padLeft - 10, gy + 4, axisFontSize, tVal)
+    <line x1="%d" y1="%.1f" x2="%d" y2="%.1f" stroke="%s" stroke-width="1" stroke-dasharray="4,4"/>
+    <text x="%d" y="%.1f" fill="%s" font-size="%d" font-weight="500" text-anchor="end">%d°</text>
+]], padLeft - 6, gy, width - padRight + 6, gy, theme.gridLine,
+    padLeft - 10, gy + 4, theme.gridText, axisFontSize, tVal)
     end
 
     -- Curvas e degradado de temperaturas
     svgParts[#svgParts + 1] = string.format([[
   <!-- Rango térmico -->
   <path d="%s" fill="url(#tempArea)"/>
-  <path d="%s" fill="none" stroke="#ff7849" stroke-width="3.2" stroke-linecap="round"/>
-  <path d="%s" fill="none" stroke="#38bdf8" stroke-width="3.2" stroke-linecap="round"/>
-]], areaPath, maxCurve, minCurve)
+  <path d="%s" fill="none" stroke="%s" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="%s" fill="none" stroke="%s" stroke-width="3.2" stroke-linecap="round"/>
+]], areaPath, maxCurve, theme.maxTempStroke, minCurve, theme.minTempStroke)
 
     -- Puntos térmicos con números limpos (sen frechas redundantes)
     for i, d in ipairs(dailyDays) do
@@ -425,13 +488,16 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         local tMinD = tonumber(d.tempMin) or 0
         svgParts[#svgParts + 1] = string.format([[
     <!-- Máxima -->
-    <circle cx="%.1f" cy="%.1f" r="5" fill="#141720" stroke="#ff7849" stroke-width="2.8"/>
-    <text x="%.1f" y="%.1f" fill="#ff7849" font-size="%d" font-weight="bold" text-anchor="middle">%d°</text>
+    <circle cx="%.1f" cy="%.1f" r="5" fill="%s" stroke="%s" stroke-width="2.8"/>
+    <text x="%.1f" y="%.1f" fill="%s" font-size="%d" font-weight="bold" text-anchor="middle">%d°</text>
 
     <!-- Mínima -->
-    <circle cx="%.1f" cy="%.1f" r="5" fill="#141720" stroke="#38bdf8" stroke-width="2.8"/>
-    <text x="%.1f" y="%.1f" fill="#38bdf8" font-size="%d" font-weight="bold" text-anchor="middle">%d°</text>
-]], mx, my, mx, my - 8, tempFontSize, tMax, nx, ny, nx, ny + 18, tempFontSize, tMinD)
+    <circle cx="%.1f" cy="%.1f" r="5" fill="%s" stroke="%s" stroke-width="2.8"/>
+    <text x="%.1f" y="%.1f" fill="%s" font-size="%d" font-weight="bold" text-anchor="middle">%d°</text>
+]], mx, my, theme.maxTempPointFill, theme.maxTempStroke,
+    mx, my - 8, theme.maxTempText, tempFontSize, tMax,
+    nx, ny, theme.minTempPointFill, theme.minTempStroke,
+    nx, ny + 18, theme.minTempText, tempFontSize, tMinD)
     end
 
     -- Cabeceira de cada día (Día e data na primeira liña; icona diante da predición e probabilidade de choiva na segunda)
@@ -456,7 +522,7 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         end
         local dateSuffix = (dateSub ~= "") and (", " .. dateSub) or ""
 
-        local dayColor = isToday and "#ff9800" or "#f8fafc"
+        local dayColor = isToday and theme.todayTitle or theme.dayTitle
         local skyClean = shared.cleanHtml(d.skyDesc or ""):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
         local rain = tonumber(d.rainProb) or 0
 
@@ -476,7 +542,7 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         local startX = x - groupW / 2
         local iconCx = startX + 14
         local iconCy = weatherY
-        local iconSvg = shared.renderWeatherSvgIcon(d.glyph or "cloud", iconCx, iconCy)
+        local iconSvg = shared.renderWeatherSvgIcon(d.glyph or "cloud", iconCx, iconCy, isDark)
 
         local textX = startX + iconW + gap1
         local textY = weatherY + 5
@@ -494,27 +560,28 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         svgParts[#svgParts + 1] = string.format([[
     <text x="%.1f" y="%d" text-anchor="middle">
       <tspan fill="%s" font-size="%d" font-weight="bold">%s</tspan>
-      <tspan fill="#94a3b8" font-size="%d" font-weight="500">%s</tspan>
+      <tspan fill="%s" font-size="%d" font-weight="500">%s</tspan>
     </text>
     %s
-    <text x="%.1f" y="%.1f" fill="#f1f5f9" font-size="%.1f" font-weight="500" text-anchor="start">%s</text>
+    <text x="%.1f" y="%.1f" fill="%s" font-size="%.1f" font-weight="500" text-anchor="start">%s</text>
     <g transform="translate(%.1f, %.1f) scale(%.2f)">
-      <path d="M 4 1 C 4 1, 1 5, 1 8 A 3 3 0 0 0 7 8 C 7 5, 4 1, 4 1 Z" fill="#38bdf8"/>
+      <path d="M 4 1 C 4 1, 1 5, 1 8 A 3 3 0 0 0 7 8 C 7 5, 4 1, 4 1 Z" fill="%s"/>
     </g>
-    <text x="%.1f" y="%.1f" fill="#38bdf8" font-size="%.1f" font-weight="bold" text-anchor="start">%d%%</text>
-    <rect x="%.1f" y="%.1f" width="%.1f" height="2.5" rx="1.25" fill="#1e293b"/>
+    <text x="%.1f" y="%.1f" fill="%s" font-size="%.1f" font-weight="bold" text-anchor="start">%d%%</text>
+    <rect x="%.1f" y="%.1f" width="%.1f" height="2.5" rx="1.25" fill="%s"/>
     <rect x="%.1f" y="%.1f" width="%.1f" height="2.5" rx="1.25" fill="url(#rainGaugeGrad)"/>
-]], x, dayY, dayColor, dayTitleSize, dayTitle, dateSubSize, dateSuffix, iconSvg,
-    textX, textY, skyFontSize, skyClean,
-    dropX, dropY, dropScale,
-    rainTextX, rainTextY, rainFontSize, rain,
-    gaugeX, gaugeY, gaugeW, gaugeX, gaugeY, fillW)
+]], x, dayY, dayColor, dayTitleSize, dayTitle, theme.dateSub, dateSubSize, dateSuffix, iconSvg,
+    textX, textY, theme.skyDesc, skyFontSize, skyClean,
+    dropX, dropY, dropScale, theme.rainDrop,
+    rainTextX, rainTextY, theme.rainText, rainFontSize, rain,
+    gaugeX, gaugeY, gaugeW, theme.rainGaugeBg,
+    gaugeX, gaugeY, fillW)
     end
 
     -- Franxa inferior para o vento
     local windSepY = height - 42
     local windY = height - 26
-    svgParts[#svgParts + 1] = string.format('  <line x1="16" y1="%d" x2="%d" y2="%d" stroke="#222838" stroke-width="1"/>\n', windSepY, width - 16, windSepY)
+    svgParts[#svgParts + 1] = string.format('  <line x1="16" y1="%d" x2="%d" y2="%d" stroke="%s" stroke-width="1"/>\n', windSepY, width - 16, windSepY, theme.windSep)
     for i, d in ipairs(dailyDays) do
         local x = xs[i]
         local windDesc = tostring(d.windDesc or "")
@@ -525,13 +592,13 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
 
         svgParts[#svgParts + 1] = string.format([[
     <g transform="translate(%.1f, %d)">
-      <circle cx="10" cy="10" r="10" fill="#1e2330"/>
+      <circle cx="10" cy="10" r="10" fill="%s" stroke="%s" stroke-width="0.8"/>
       <g transform="rotate(%d, 10, 10)">
-        <path d="M 10 3 L 15 16 L 10 13 L 5 16 Z" fill="#94a3b8"/>
+        <path d="M 10 3 L 15 16 L 10 13 L 5 16 Z" fill="%s"/>
       </g>
-      <text x="26" y="14" fill="#cbd5e1" font-size="%.1f" font-weight="500">%s</text>
+      <text x="26" y="14" fill="%s" font-size="%.1f" font-weight="500">%s</text>
     </g>
-]], x - halfW, windY, deg, windTextSize, cleanWind)
+]], x - halfW, windY, theme.windCircleFill, theme.windCircleStroke, deg, theme.windArrow, theme.windText, windTextSize, cleanWind)
     end
 
     svgParts[#svgParts + 1] = "</svg>"
