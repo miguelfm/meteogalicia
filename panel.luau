@@ -805,13 +805,24 @@ render = function()
                     tonumber(h.temp) or 0, skyPart,
                     rainWord, tonumber(h.rainProb) or 0)
 
-                local tickH = isCurrent and 13 or (isMajor and 9 or (isMid and 6 or 4.5))
-                local tickW = isCurrent and 3.2 or (isMajor and 2.2 or (isMid and 1.6 or 1.2))
-                local tickRadius = isCurrent and 1.6 or 0.8
-                local tickColor = isCurrent and (isDark and "#34d399" or "#059669")
-                    or (isMajor and (isDark and "#94a3b8" or "#64748b")
-                    or (isMid and (isDark and "#475569" or "#94a3b8")
-                    or (isDark and "#2a3244" or "#cbd5e1")))
+                local rainProbVal = tonumber(h.rainProb) or 0
+                local maxBarH = 20
+                local barH = 2
+                local barW = 3
+                local barRadius = 1
+                local barColor = isDark and "#2a3244" or "#cbd5e1"
+
+                if rainProbVal > 0 then
+                    barH = math.max(3, math.floor((rainProbVal / 100.0) * maxBarH))
+                    barW = 5.5
+                    barRadius = 1.8
+                    barColor = isDark and "#38bdf8" or "#0284c7"
+                elseif isCurrent then
+                    barH = 3
+                    barW = 4
+                    barRadius = 1.5
+                    barColor = isDark and "#34d399" or "#059669"
+                end
 
                 local labelWidget = nil
                 if isCurrent then
@@ -843,21 +854,29 @@ render = function()
                     end
                 end
 
+                local rainCol = ui.column({
+                    height = maxBarH,
+                    justify = "end",
+                    align = "center",
+                }, {
+                    ui.box({
+                        width = barW,
+                        height = barH,
+                        radius = barRadius,
+                        fill = barColor,
+                    }),
+                })
+
                 timelineSlots[#timelineSlots + 1] = ui.column({
                     flexGrow = 1,
-                    height = 27,
+                    height = 34,
                     align = "center",
-                    justify = "center",
-                    gap = 2,
+                    justify = "end",
+                    gap = 3,
                     tooltip = tTip,
                     onClick = clickHandler,
                 }, {
-                    ui.box({
-                        width = tickW,
-                        height = tickH,
-                        radius = tickRadius,
-                        fill = tickColor,
-                    }),
+                    rainCol,
                     labelWidget,
                 })
             end
