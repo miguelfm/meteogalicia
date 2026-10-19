@@ -362,10 +362,7 @@ local function poll()
                     -- Engadir á curva horaria continua dende o comezo de hoxe para o gráfico diario
                     if sec >= todayStartSec and not seenCurveTs[sec] then
                         seenCurveTs[sec] = true
-                        hourlyCurve[#hourlyCurve + 1] = {
-                            timestamp = sec,
-                            temp = h.averageTemperature or 0,
-                        }
+                        hourlyCurve[#hourlyCurve + 1] = item
                     end
                 end
 

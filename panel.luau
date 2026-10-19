@@ -668,7 +668,9 @@ render = function()
         end
 
         local dayName = weekdaysFull[h.weekday] or ""
-        local cardTooltip = dayName .. ", " .. tostring(h.day) .. " ás " .. (h.time or "--:--") .. " · " .. (h.skyDesc or "") .. " · " .. tostring(h.temp or 0) .. "°C"
+        local atWord = isEn and "at" or "ás"
+        local rainWord = isEn and "rain" or "choiva"
+        local cardTooltip = string.format("%s, %d %s %s · %s · %d°C · %d%% %s", dayName, h.day or 0, atWord, h.time or "--:--", h.skyDesc or "", tonumber(h.temp) or 0, tonumber(h.rainProb) or 0, rainWord)
 
         hourCards[#hourCards + 1] = ui.column({
             width = effectiveCardWidth,
@@ -773,6 +775,136 @@ render = function()
             width = s.chartWidth,
             height = s.chartHeight,
         })
+
+        -- ── 3.1. SELECTOR DISCRETO AO PÉ DO GRÁFICO ─────────────────────────
+        local curveHours = weather.hourlyCurve or weather.hourly or {}
+        if showDailyHourlyCurve and #curveHours > 0 then
+            local maxTrack = math.min(48, #curveHours)
+            local timelineSlots = {}
+            local atWord = isEn and "at" or "ás"
+            local rainWord = isEn and "rain" or "choiva"
+
+            for idx = 1, maxTrack do
+                local h = curveHours[idx]
+                local ts = tonumber(h.timestamp) or 0
+                local isCurrent = (ts == currentHourSec) or (currentHourSec >= ts and currentHourSec < ts + 3600)
+                local hNum = tonumber(h.hourNum) or tonumber(os.date("%H", ts)) or 0
+                local isMajor = (hNum % 6 == 0)
+                local isMid = (hNum % 3 == 0)
+
+                local dayName = weekdaysFull[h.weekday] or (h.isTomorrow and tr("ui.tomorrow", "Mañá") or tr("ui.today", "Hoxe"))
+                local hTime = h.time or string.format("%02d:00", hNum)
+                local skyDesc = h.skyDesc or ""
+                local tTip = string.format("%s, %d %s %s · %d°C · %d%% %s%s",
+                    dayName, h.day or 0, atWord, hTime, tonumber(h.temp) or 0, tonumber(h.rainProb) or 0, rainWord,
+                    (skyDesc ~= "" and (" · " .. skyDesc) or ""))
+
+                local tickH = isCurrent and 13 or (isMajor and 9 or (isMid and 6 or 4.5))
+                local tickW = isCurrent and 3.2 or (isMajor and 2.2 or (isMid and 1.6 or 1.2))
+                local tickRadius = isCurrent and 1.6 or 0.8
+                local tickColor = isCurrent and (isDark and "#34d399" or "#059669")
+                    or (isMajor and (isDark and "#94a3b8" or "#64748b")
+                    or (isMid and (isDark and "#475569" or "#94a3b8")
+                    or (isDark and "#2a3244" or "#cbd5e1")))
+
+                local labelWidget = nil
+                if isCurrent then
+                    labelWidget = ui.label({
+                        text = isEn and "Now" or "Agora",
+                        fontSize = 8.5,
+                        fontWeight = "bold",
+                        color = isDark and "#34d399" or "#059669",
+                    })
+                elseif isMajor then
+                    labelWidget = ui.label({
+                        text = string.format("%02dh", hNum),
+                        fontSize = 8.5,
+                        fontWeight = "medium",
+                        color = isDark and "#94a3b8" or "#64748b",
+                    })
+                else
+                    labelWidget = ui.box({ width = 1, height = 10, fill = "#00000000" })
+                end
+
+                local clickHandler = function()
+                    for oIdx, ph in ipairs(hourly) do
+                        if ph.timestamp == ts then
+                            local newOffset = math.max(0, math.min(oIdx - 1, maxOffset))
+                            noctalia.state.set("hourly_offset", newOffset)
+                            render()
+                            break
+                        end
+                    end
+                end
+
+                timelineSlots[#timelineSlots + 1] = ui.column({
+                    flexGrow = 1,
+                    height = 27,
+                    align = "center",
+                    justify = "center",
+                    gap = 2,
+                    tooltip = tTip,
+                    onClick = clickHandler,
+                }, {
+                    ui.box({
+                        width = tickW,
+                        height = tickH,
+                        radius = tickRadius,
+                        fill = tickColor,
+                    }),
+                    labelWidget,
+                })
+            end
+
+            local day1Title = dailyDays[1] and (weekdaysFull[dailyDays[1].weekday] or tr("ui.today", "Hoxe")) or ""
+            local day2Title = dailyDays[2] and (weekdaysFull[dailyDays[2].weekday] or tr("ui.tomorrow", "Mañá")) or ""
+            local daysLabel = (day1Title ~= "" and day2Title ~= "") and (day1Title .. " → " .. day2Title) or ""
+
+            local selectorHeader = ui.row({
+                align = "center",
+                justify = "space_between",
+                width = s.chartWidth - 28,
+            }, {
+                ui.row({ gap = 6, align = "center" }, {
+                    ui.box({ width = 7, height = 7, radius = 3.5, fill = isDark and "#34d399" or "#059669" }),
+                    ui.label({
+                        text = tr("ui.hourly_track_title", "Previsión horaria (48h)"),
+                        fontSize = s.sectionSub,
+                        fontWeight = "bold",
+                        color = "on_surface",
+                    }),
+                    ui.label({
+                        text = "· " .. tr("ui.hourly_track_hint", "Pasa o rato polos puntos para ver hora, temperatura e choiva"),
+                        fontSize = s.sectionSub - 1,
+                        color = "on_surface_variant",
+                    }),
+                }),
+                ui.label({
+                    text = daysLabel,
+                    fontSize = s.sectionSub - 1,
+                    fontWeight = "medium",
+                    color = "on_surface_variant",
+                }),
+            })
+
+            rootChildren[#rootChildren + 1] = ui.column({
+                width = s.chartWidth,
+                paddingH = 14,
+                paddingV = 7,
+                radius = 10,
+                fill = isDark and "#141720" or (colors and colors.surfaceVariant or "#e9efef"),
+                border = isDark and "#252b3b" or (colors and colors.outline or "#cbd5e1"),
+                borderWidth = 1,
+                gap = 5,
+            }, {
+                selectorHeader,
+                ui.row({
+                    width = s.chartWidth - 28,
+                    align = "center",
+                    justify = "space_between",
+                }, timelineSlots),
+            })
+        end
     end
 
     -- ── 4. COMENTARIO OFICIAL DE METEOGALICIA ─────────────────────────────────

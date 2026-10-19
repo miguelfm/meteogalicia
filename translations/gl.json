@@ -56,5 +56,7 @@
   "tooltip.rain_prob": "Choiva",
   "tooltip.wind": "Vento",
   "tooltip.updated": "Actualizado",
-  "tooltip.click_hint": "Preme para ver a predición detallada"
+  "tooltip.click_hint": "Preme para ver a predición detallada",
+  "ui.hourly_track_title": "Previsión horaria (48h)",
+  "ui.hourly_track_hint": "Pasa o rato polos puntos para ver hora, temperatura e choiva"
 }

@@ -56,5 +56,7 @@
   "tooltip.rain_prob": "Rain",
   "tooltip.wind": "Wind",
   "tooltip.updated": "Updated",
-  "tooltip.click_hint": "Click to view detailed forecast"
+  "tooltip.click_hint": "Click to view detailed forecast",
+  "ui.hourly_track_title": "Hourly timeline (48h)",
+  "ui.hourly_track_hint": "Hover over points to see time, temperature and rain"
 }
