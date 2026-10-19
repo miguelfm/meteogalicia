@@ -617,10 +617,10 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         windArrow = isDark and "#94a3b8" or "#475569",
         windText = isDark and "#cbd5e1" or (colors.onSurface or "#334155"),
 
-        -- Curva horaria continua (48h/72h)
-        hourlyStroke = isDark and "#f1f5f9" or "#334155",
-        hourlyGlow = isDark and "rgba(241, 245, 249, 0.16)" or "rgba(51, 65, 85, 0.12)",
-        nowDotFill = isDark and "#ff9800" or "#d97706",
+        -- Curva horaria continua (48h/72h) en verde esmeralda elegante
+        hourlyStroke = isDark and "#34d399" or "#059669",
+        hourlyGlow = isDark and "#34d399" or "#059669",
+        nowDotFill = isDark and "#34d399" or "#059669",
         nowDotRing = isDark and "#141720" or (colors.surfaceVariant or "#e9efef"),
     }
 
@@ -684,8 +684,8 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     if hourlyPath ~= "" then
         svgParts[#svgParts + 1] = string.format([[
     <!-- Curva de temperatura horaria continua (sen números para manter o gráfico despexado) -->
-    <path d="%s" fill="none" stroke="%s" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.16"/>
-    <path d="%s" fill="none" stroke="%s" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.88"/>
+    <path d="%s" fill="none" stroke="%s" stroke-width="4.8" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.22"/>
+    <path d="%s" fill="none" stroke="%s" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.95"/>
 ]], hourlyPath, theme.hourlyGlow, hourlyPath, theme.hourlyStroke)
     end
 
