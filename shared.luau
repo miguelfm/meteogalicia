@@ -469,9 +469,10 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     local tMax = maxVal + 2
     if tMax <= tMin then tMax = tMin + 5 end
 
-    -- Zonas verticais proporcionais para curvas térmicas
-    local chartTop = math.floor(height * 0.46)
-    local chartBot = math.floor(height * 0.73)
+    local isXlarge = (opts and opts.isXlarge == true)
+    -- Zonas verticais proporcionais para curvas térmicas (vento integrado na cabeceira)
+    local chartTop = isXlarge and 106 or 98
+    local chartBot = height - (isXlarge and 36 or 30)
 
     local function yTemp(t: number): number
         return chartBot - ((t - tMin) / (tMax - tMin)) * (chartBot - chartTop)
@@ -620,10 +621,10 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         windArrow = isDark and "#94a3b8" or "#475569",
         windText = isDark and "#cbd5e1" or (colors.onSurface or "#334155"),
 
-        -- Curva horaria continua (48h/72h) en gris con tonalidade verde suave
-        hourlyStroke = isDark and "#829f90" or "#4a6b63",
-        hourlyGlow = isDark and "#829f90" or "#4a6b63",
-        nowDotFill = isDark and "#829f90" or "#4a6b63",
+        -- Curva horaria continua (48h/72h) en gris con leve matiz verde (moito máis gris que verde)
+        hourlyStroke = isDark and "#8f9690" or "#58605a",
+        hourlyGlow = isDark and "#8f9690" or "#58605a",
+        nowDotFill = isDark and "#8f9690" or "#58605a",
         nowDotRing = isDark and "#141720" or (colors.surfaceVariant or "#e9efef"),
     }
 
@@ -656,12 +657,11 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         svgParts[#svgParts + 1] = string.format('  <line x1="%.1f" y1="12" x2="%.1f" y2="%d" stroke="%s" stroke-width="1"/>\n', sepX, sepX, height - 12, theme.daySep)
     end
 
-    local isXlarge = (opts and opts.isXlarge == true)
-    local tempFontSize = isXlarge and 16 or 14
-    local dayTitleSize = isXlarge and 16 or 14
-    local dateSubSize = isXlarge and 13 or 11
-    local skyDescSize = isXlarge and 13.5 or 12
-    local windTextSize = isXlarge and 13.5 or 12
+    local tempFontSize = isXlarge and 15 or 13.5
+    local dayTitleSize = isXlarge and 15 or 13.5
+    local dateSubSize = isXlarge and 12 or 11
+    local skyDescSize = isXlarge and 13.0 or 12.0
+    local windTextSize = isXlarge and 12.0 or 11.0
     local axisFontSize = isXlarge and 12 or 11
     local axisTitleSize = isXlarge and 12 or 10
 
@@ -727,9 +727,10 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     nx, ny + 18, theme.minTempText, tempFontSize, tMinD)
     end
 
-    -- Cabeceira de cada día (Día e data na primeira liña; icona diante da predición e probabilidade de choiva na segunda)
-    local dayY = 28
-    local weatherY = 64
+    -- Cabeceira de cada día integrada (1ª liña: día e data; 2ª liña: icona + estado do ceo + choiva; 3ª liña: vento)
+    local dayY = isXlarge and 23 or 21
+    local weatherY = isXlarge and 46 or 43
+    local windY = isXlarge and 69 or 65
 
     for i, d in ipairs(dailyDays) do
         local x = xs[i]
@@ -753,8 +754,8 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         local skyClean = shared.cleanHtml(d.skyDesc or ""):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
         local rain = tonumber(d.rainProb) or 0
 
-        local skyFontSize = (#skyClean > 15) and (isXlarge and 13.5 or 12.5) or (isXlarge and 15.0 or 14.0)
-        local rainFontSize = isXlarge and 14.5 or 13.5
+        local skyFontSize = (#skyClean > 15) and (isXlarge and 12.5 or 11.5) or (isXlarge and 14.0 or 13.0)
+        local rainFontSize = isXlarge and 13.5 or 12.5
 
         local iconW = 28
         local gap1 = 8
@@ -772,23 +773,60 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         local iconSvg = shared.renderWeatherSvgIcon(d.glyph or "cloud", iconCx, iconCy, isDark)
 
         local textX = startX + iconW + gap1
-        local textY = weatherY + 5
+        local textY = weatherY + 4
         local dropX = textX + textW + gap2
         local dropY = weatherY - 5
         local dropScale = 0.85 + (rain / 100.0) * 0.4
         local rainTextX = dropX + 13
-        local rainTextY = weatherY + 5
+        local rainTextY = weatherY + 4
 
         local gaugeW = rainGroupW + 4
         local gaugeX = dropX - 2
         local gaugeY = textY + 6
         local fillW = math.max(rain > 0 and 2.5 or 0.0, (rain / 100.0) * gaugeW)
 
+        -- 3ª liña: Indicación do vento integrada arriba
+        local windDesc = tostring(d.windDesc or "")
+        if windDesc == "" then windDesc = (isEn and "Calm" or "Calma") end
+        local deg = shared.getWindAngle(windDesc)
+        local cleanWind = windDesc:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+        local windIconR = isXlarge and 8.0 or 7.5
+        local windIconDiam = windIconR * 2
+        local windGap = 5
+        local windTextW = #cleanWind * (isXlarge and 6.8 or 6.0)
+        local windTotalW = windIconDiam + windGap + windTextW
+        local windStartX = x - windTotalW / 2
+        local windTopY = windY - windIconR
+
+        local windArrowSvg = ""
+        if cleanWind:lower():find("calm") then
+            windArrowSvg = string.format('<circle cx="%.1f" cy="%.1f" r="2.2" fill="%s"/>', windIconR, windIconR, theme.windArrow)
+        else
+            windArrowSvg = string.format([[
+        <g transform="rotate(%d, %.1f, %.1f)">
+          <path d="M %.1f %.1f L %.1f %.1f L %.1f %.1f L %.1f %.1f Z" fill="%s"/>
+        </g>]], deg, windIconR, windIconR,
+            windIconR, 2.0,
+            windIconR + 3.6, windIconDiam - 2.8,
+            windIconR, windIconDiam - 5.0,
+            windIconR - 3.6, windIconDiam - 2.8,
+            theme.windArrow)
+        end
+
+        local windSvg = string.format([[
+    <g transform="translate(%.1f, %.1f)">
+      <circle cx="%.1f" cy="%.1f" r="%.1f" fill="%s" stroke="%s" stroke-width="0.8"/>
+      %s
+      <text x="%.1f" y="%.1f" fill="%s" font-size="%.1f" font-weight="500">%s</text>
+    </g>]], windStartX, windTopY,
+            windIconR, windIconR, windIconR, theme.windCircleFill, theme.windCircleStroke,
+            windArrowSvg,
+            windIconDiam + windGap, windIconR + 3.8, theme.windText, windTextSize, cleanWind)
+
         svgParts[#svgParts + 1] = string.format([[
-    <text x="%.1f" y="%d" text-anchor="middle">
-      <tspan fill="%s" font-size="%d" font-weight="bold">%s</tspan>
-      <tspan fill="%s" font-size="%d" font-weight="500">%s</tspan>
-    </text>
+    <!-- Liña 1: Día e data -->
+    <text x="%.1f" y="%d" text-anchor="middle"><tspan fill="%s" font-size="%d" font-weight="bold">%s</tspan><tspan fill="%s" font-size="%d" font-weight="500">%s</tspan></text>
+    <!-- Liña 2: Ceo e choiva -->
     %s
     <text x="%.1f" y="%.1f" fill="%s" font-size="%.1f" font-weight="500" text-anchor="start">%s</text>
     <g transform="translate(%.1f, %.1f) scale(%.2f)">
@@ -797,35 +835,16 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     <text x="%.1f" y="%.1f" fill="%s" font-size="%.1f" font-weight="bold" text-anchor="start">%d%%</text>
     <rect x="%.1f" y="%.1f" width="%.1f" height="2.5" rx="1.25" fill="%s"/>
     <rect x="%.1f" y="%.1f" width="%.1f" height="2.5" rx="1.25" fill="url(#rainGaugeGrad)"/>
-]], x, dayY, dayColor, dayTitleSize, dayTitle, theme.dateSub, dateSubSize, dateSuffix, iconSvg,
+    <!-- Liña 3: Vento -->
+    %s
+]], x, dayY, dayColor, dayTitleSize, dayTitle, theme.dateSub, dateSubSize, dateSuffix,
+    iconSvg,
     textX, textY, theme.skyDesc, skyFontSize, skyClean,
     dropX, dropY, dropScale, theme.rainDrop,
     rainTextX, rainTextY, theme.rainText, rainFontSize, rain,
     gaugeX, gaugeY, gaugeW, theme.rainGaugeBg,
-    gaugeX, gaugeY, fillW)
-    end
-
-    -- Franxa inferior para o vento
-    local windSepY = height - 42
-    local windY = height - 26
-    svgParts[#svgParts + 1] = string.format('  <line x1="16" y1="%d" x2="%d" y2="%d" stroke="%s" stroke-width="1"/>\n', windSepY, width - 16, windSepY, theme.windSep)
-    for i, d in ipairs(dailyDays) do
-        local x = xs[i]
-        local windDesc = tostring(d.windDesc or "")
-        if windDesc == "" then windDesc = "Calma" end
-        local deg = shared.getWindAngle(windDesc)
-        local cleanWind = windDesc:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
-        local halfW = math.floor((#cleanWind * (isXlarge and 7.2 or 6.5) + 26) / 2)
-
-        svgParts[#svgParts + 1] = string.format([[
-    <g transform="translate(%.1f, %d)">
-      <circle cx="10" cy="10" r="10" fill="%s" stroke="%s" stroke-width="0.8"/>
-      <g transform="rotate(%d, 10, 10)">
-        <path d="M 10 3 L 15 16 L 10 13 L 5 16 Z" fill="%s"/>
-      </g>
-      <text x="26" y="14" fill="%s" font-size="%.1f" font-weight="500">%s</text>
-    </g>
-]], x - halfW, windY, theme.windCircleFill, theme.windCircleStroke, deg, theme.windArrow, theme.windText, windTextSize, cleanWind)
+    gaugeX, gaugeY, fillW,
+    windSvg)
     end
 
     svgParts[#svgParts + 1] = "</svg>"

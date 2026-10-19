@@ -762,7 +762,7 @@ render = function()
             }
         end
 
-        local grayGreen = isDark and "#829f90" or "#4a6b63"
+        local grayGreen = isDark and "#8f9690" or "#58605a"
 
         local chartSvg = shared.generateDailyChartSvg(dailyDays, s.chartWidth, s.chartHeight, {
             isEn = isEn,
