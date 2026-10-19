@@ -376,6 +376,68 @@ local function poll()
 
                 local currentSky = shared.getSky(currentEntry and currentEntry.skyCode or todayInfo.skyId)
 
+                -- Recuperar ou calcular temperaturas do día anterior (Onte) para ancorar o gráfico
+                local history = noctalia.state.get("weather_daily_history")
+                if type(history) ~= "table" then history = {} end
+                local concelloHistory = history[tostring(concelloId)] or {}
+                local yesterdayDateStr = os.date("%Y-%m-%d", nowSec - 86400)
+                local yesterdayInfo = concelloHistory[yesterdayDateStr]
+
+                if not yesterdayInfo then
+                    -- Se non temos onte no historial, calculamos a continuidade térmica
+                    -- baseada na mínima da madrugada de hoxe (00h-06h) e na máxima prevista
+                    local earlyMin = 999
+                    for _, h in ipairs(rawToday) do
+                        local ms = tonumber(h.date) or 0
+                        local sec = math.floor(ms / 1000)
+                        local hNum = tonumber(os.date("%H", sec)) or 0
+                        local temp = tonumber(h.averageTemperature)
+                        if hNum <= 6 and temp then
+                            if temp < earlyMin then
+                                earlyMin = temp
+                            end
+                        end
+                    end
+                    if earlyMin == 999 then earlyMin = todayInfo.tempMin end
+                    yesterdayInfo = {
+                        tempMin = earlyMin,
+                        tempMax = todayInfo.tempMax,
+                    }
+                end
+
+                -- Gardar o día de hoxe no historial para o día de mañá
+                concelloHistory[todayDateStr] = {
+                    tempMin = todayInfo.tempMin,
+                    tempMax = todayInfo.tempMax,
+                }
+                history[tostring(concelloId)] = concelloHistory
+                noctalia.state.set("weather_daily_history", history)
+
+                -- Obter datos do seguinte día (Día 5) a partir do medio prazo para ancorar o extremo dereito
+                local nextDayInfo = nil
+                local lastDay = dailyDays[#dailyDays] or todayInfo
+                for _, mEntry in ipairs(mediumList) do
+                    local ms = tonumber(mEntry.date) or 0
+                    if ms > 0 then
+                        local sec = math.floor(ms / 1000) + 43200
+                        local dInfo = os.date("*t", sec)
+                        local dKey = string.format("%04d-%02d-%02d", dInfo.year, dInfo.month, dInfo.day)
+                        if not seenDateKeys[dKey] and mEntry.maxTemperature and mEntry.minTemperature then
+                            nextDayInfo = {
+                                tempMin = mEntry.minTemperature,
+                                tempMax = mEntry.maxTemperature,
+                            }
+                            break
+                        end
+                    end
+                end
+                if not nextDayInfo then
+                    nextDayInfo = {
+                        tempMin = lastDay.tempMin,
+                        tempMax = lastDay.tempMax,
+                    }
+                end
+
                 local payload = {
                     concelloId = concelloId,
                     concelloName = concelloName,
@@ -392,6 +454,8 @@ local function poll()
                         time = currentEntry and currentEntry.time or string.format("%02d:00", tonumber(os.date("%H", nowSec)) or 12),
                     },
                     today = todayInfo,
+                    yesterday = yesterdayInfo,
+                    nextDay = nextDayInfo,
                     dailyDays = dailyDays,
                     hourly = processedHours,
                     hourlyCurve = hourlyCurve,

@@ -403,6 +403,36 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         xs[i] = padLeft + colW * (i - 0.5)
     end
 
+    local yesterdayOpt = opts and opts.yesterday
+    local nextDayOpt = opts and opts.nextDay
+
+    local yesterdayMax = yesterdayOpt and tonumber(yesterdayOpt.tempMax)
+    local yesterdayMin = yesterdayOpt and tonumber(yesterdayOpt.tempMin)
+
+    local nextDayMax = nextDayOpt and tonumber(nextDayOpt.tempMax)
+    local nextDayMin = nextDayOpt and tonumber(nextDayOpt.tempMin)
+
+    -- Valors por defecto se non hai ancoraxe
+    if not yesterdayMax and dailyDays[1] then
+        yesterdayMax = tonumber(dailyDays[1].tempMax) or 0
+    end
+    if not yesterdayMin and dailyDays[1] then
+        yesterdayMin = tonumber(dailyDays[1].tempMin) or 0
+    end
+    if not nextDayMax and dailyDays[n] then
+        nextDayMax = tonumber(dailyDays[n].tempMax) or 0
+    end
+    if not nextDayMin and dailyDays[n] then
+        nextDayMin = tonumber(dailyDays[n].tempMin) or 0
+    end
+
+    if yesterdayMax and yesterdayMin and yesterdayMax < yesterdayMin then
+        yesterdayMax, yesterdayMin = yesterdayMin, yesterdayMax
+    end
+    if nextDayMax and nextDayMin and nextDayMax < nextDayMin then
+        nextDayMax, nextDayMin = nextDayMin, nextDayMax
+    end
+
     local minVal = 999
     local maxVal = -999
     for _, d in ipairs(dailyDays) do
@@ -411,6 +441,11 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         if tMinD < minVal then minVal = tMinD end
         if tMaxD > maxVal then maxVal = tMaxD end
     end
+
+    if yesterdayMin and yesterdayMin < minVal then minVal = yesterdayMin end
+    if yesterdayMax and yesterdayMax > maxVal then maxVal = yesterdayMax end
+    if nextDayMin and nextDayMin < minVal then minVal = nextDayMin end
+    if nextDayMax and nextDayMax > maxVal then maxVal = nextDayMax end
 
     local hourlyList = (opts and opts.hourly) or {}
     local showHourly = (opts and opts.showHourlyLine ~= false) and (#hourlyList > 0)
@@ -448,15 +483,34 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         minPts[i] = { x = xs[i], y = yTemp(tMinD) }
     end
 
-    local maxCurve = buildSmoothBezierPath(maxPts)
-    local minCurve = buildSmoothBezierPath(minPts)
+    -- Puntos estendidos para as curvas suaves con ancoraxe no día anterior (onte) e seguinte (día 5)
+    local allCurvePtsMax: { ChartPoint } = {}
+    local allCurvePtsMin: { ChartPoint } = {}
+
+    local xPrev = padLeft - 0.5 * colW
+    local xNext = padLeft + (n + 0.5) * colW
+
+    allCurvePtsMax[1] = { x = xPrev, y = yTemp(yesterdayMax or (tonumber(dailyDays[1].tempMax) or 0)) }
+    allCurvePtsMin[1] = { x = xPrev, y = yTemp(yesterdayMin or (tonumber(dailyDays[1].tempMin) or 0)) }
+
+    for i = 1, n do
+        allCurvePtsMax[i + 1] = maxPts[i]
+        allCurvePtsMin[i + 1] = minPts[i]
+    end
+
+    allCurvePtsMax[n + 2] = { x = xNext, y = yTemp(nextDayMax or (tonumber(dailyDays[n].tempMax) or 0)) }
+    allCurvePtsMin[n + 2] = { x = xNext, y = yTemp(nextDayMin or (tonumber(dailyDays[n].tempMin) or 0)) }
+
+    local maxCurve = buildSmoothBezierPath(allCurvePtsMax)
+    local minCurve = buildSmoothBezierPath(allCurvePtsMin)
 
     local revMinPts: { ChartPoint } = {}
-    for i = #minPts, 1, -1 do
-        revMinPts[#revMinPts + 1] = minPts[i]
+    for i = #allCurvePtsMin, 1, -1 do
+        revMinPts[#revMinPts + 1] = allCurvePtsMin[i]
     end
     local revMinCurve = buildSmoothBezierPath(revMinPts)
-    local areaPath = maxCurve .. string.format(" L %.1f %.1f ", minPts[#minPts].x, minPts[#minPts].y) .. string.sub(revMinCurve, 2) .. " Z"
+    local curveCommands = revMinCurve:gsub("^%s*M%s*[%d%.%-]+%s+[%d%.%-]+", "")
+    local areaPath = maxCurve .. string.format(" L %.1f %.1f", allCurvePtsMin[#allCurvePtsMin].x, allCurvePtsMin[#allCurvePtsMin].y) .. curveCommands .. " Z"
 
     -- Curva horaria continua (48h/72h) que amosa a evolución real da temperatura sen sobrecargar con números
     local hourlyPath = ""
@@ -573,6 +627,9 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     local svgParts = {}
     svgParts[#svgParts + 1] = string.format([[<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d" font-family="system-ui, -apple-system, sans-serif">
   <defs>
+    <clipPath id="chartEnvelopeClip">
+      <rect x="%d" y="0" width="%d" height="%d"/>
+    </clipPath>
     <linearGradient id="tempArea" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%%" stop-color="%s" stop-opacity="%s"/>
       <stop offset="100%%" stop-color="%s" stop-opacity="%s"/>
@@ -586,6 +643,7 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
   <!-- Fondo da tarxeta -->
   <rect width="%d" height="%d" rx="14" fill="%s" stroke="%s" stroke-width="1.2"/>
 ]], width, height, width, height,
+    padLeft, availW, height,
     theme.tempAreaStop0, theme.tempAreaStop0Op, theme.tempAreaStop1, theme.tempAreaStop1Op,
     width, height, theme.cardBg, theme.cardBorder)
 
@@ -616,32 +674,35 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     padLeft - 10, gy + 4, theme.gridText, axisFontSize, tVal)
     end
 
-    -- Curvas e degradado de temperaturas
+    -- Curvas e degradado de temperaturas (delimitadas á área útil do gráfico)
     svgParts[#svgParts + 1] = string.format([[
-  <!-- Rango térmico -->
-  <path d="%s" fill="url(#tempArea)"/>
+  <g clip-path="url(#chartEnvelopeClip)">
+    <!-- Rango térmico continuo envolvente -->
+    <path d="%s" fill="url(#tempArea)"/>
 ]], areaPath)
 
     if hourlyPath ~= "" then
         svgParts[#svgParts + 1] = string.format([[
-  <!-- Curva de temperatura horaria continua (sen números para manter o gráfico despexado) -->
-  <path d="%s" fill="none" stroke="%s" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.16"/>
-  <path d="%s" fill="none" stroke="%s" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.88"/>
+    <!-- Curva de temperatura horaria continua (sen números para manter o gráfico despexado) -->
+    <path d="%s" fill="none" stroke="%s" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.16"/>
+    <path d="%s" fill="none" stroke="%s" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.88"/>
 ]], hourlyPath, theme.hourlyGlow, hourlyPath, theme.hourlyStroke)
+    end
 
-        if nowX and nowY then
-            svgParts[#svgParts + 1] = string.format([[
+    svgParts[#svgParts + 1] = string.format([[
+    <!-- Liñas suaves térmicas máxima e mínima -->
+    <path d="%s" fill="none" stroke="%s" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="%s" fill="none" stroke="%s" stroke-width="3.2" stroke-linecap="round"/>
+  </g>
+]], maxCurve, theme.maxTempStroke, minCurve, theme.minTempStroke)
+
+    if hourlyPath ~= "" and nowX and nowY then
+        svgParts[#svgParts + 1] = string.format([[
   <!-- Indicador do momento actual (Agora) sobre a curva horaria -->
   <circle cx="%.1f" cy="%.1f" r="6.5" fill="%s" fill-opacity="0.25"/>
   <circle cx="%.1f" cy="%.1f" r="3.8" fill="%s" stroke="%s" stroke-width="1.8"/>
 ]], nowX, nowY, theme.nowDotFill, nowX, nowY, theme.nowDotFill, theme.nowDotRing)
-        end
     end
-
-    svgParts[#svgParts + 1] = string.format([[
-  <path d="%s" fill="none" stroke="%s" stroke-width="3.2" stroke-linecap="round"/>
-  <path d="%s" fill="none" stroke="%s" stroke-width="3.2" stroke-linecap="round"/>
-]], maxCurve, theme.maxTempStroke, minCurve, theme.minTempStroke)
 
     -- Puntos térmicos con números limpos (sen frechas redundantes)
     for i, d in ipairs(dailyDays) do
