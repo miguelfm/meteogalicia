@@ -22,17 +22,26 @@ Plugin nativo para o shell de escritorio **Noctalia** (en Wayland / Hyprland) qu
     * Roda do rato para desprazar a predición horaria hora a hora dende a propia barra.
 * **Panel Emerxente Completo (`panel`)**:
   * **Cabeceira de condicións actuais**: Glifo de gran formato, descrición sinóptica, temperatura instantánea, temperaturas máxima/mínima da xornada e horarios de amencer e solpor con separadores visuais elegantes.
-  * **Predición horaria interactiva (ata 48 horas)**:
+  * **Predición horaria interactiva (ata 48 horas, opcional)**:
     * Carrusel con tarxetas horarias mostrando a hora, glifo, temperatura prevista e probabilidade de choiva (💧 %).
     * Navegación fluída por bloques de 12 horas (`0h-12h`, `12h-24h`, `24h-36h`, `36h-48h`) con frechas na cabeceira.
     * Separadores visuais discretos e data centrada no cambio de día para identificar comodamente a transición entre xornadas.
     * Desprazamento hora a hora ou por bloques mediante teclado e roda do rato.
+    * Oculto por defecto mediante a opción `show_hourly_cards`, xa que o novo timeline integrado permite prescindir deste bloque mantendo unha interface máis limpa e compacta.
   * **Gráfico interactivo dos vindeiros días**:
     * Gráfico continuo xerado en SVG nativo coas curvas de temperatura máxima e mínima para 4 días completos (combinando a predición a curto e medio prazo oficial de MeteoGalicia).
-    * **Liña continua de evolución horaria (48h/72h)**: Trazo suave e limpo sen números que amosa a oscilación térmica real hora a hora entre a máxima e a mínima diaria, cun indicador sutil do momento actual (*Agora*).
+    * **Liña continua de evolución horaria (48h/72h/96h)**: Trazo suave en ton predominantemente gris con leve matiz verde (`#8f9690` en tema escuro, `#58605a` en tema claro), calibrado para destacar con elegancia sen saturar a interface fronte ao azul da precipitación e ás curvas térmicas diúrnas.
+    * **Indicador de vento compacto**: Integración na terceira liña da cabeceira de cada día (frecha con orientación real de compás e descrición de intensidade), cun espazado vertical optimizado (22-24px) que aproveita ao máximo o layout.
     * **Adaptación dinámica ao tema (claro e escuro)**: Detección automática do modo activo e da paleta do sistema (`isDarkMode`, `getColor`), con fondos de tarxeta, tipografía, aneis térmicos e iconas optimizados para un contraste e integración visual impecables tanto en tema escuro coma en tema claro.
     * Cabeceira integrada de cada día co nome do día e data (`Hoxe, 19 out`, `Mañá, 20 out`, etc.) combinando tipografía destacada e atenuada.
-    * Disposición horizontal compacta con glifo oficial, descrición do tempo e indicador de probabilidade de choiva con barra calibrada (gauge) de alto contraste.
+  * **Timeline sincronizado de probabilidade de chuvia e cambios meteorolóxicos**:
+    * Situado discretamente ao pé do gráfico e sincronizado verticalmente ao 100% coas horas da curva horaria de temperaturas.
+    * **Barras de probabilidade de precipitación**: Columnas azuis con alturas proporcionais para cada hora das 96 horas de predición continua.
+    * **Iconas contextuais nos cambios de tempo**: As iconas do ceo colócanse dinamicamente cando o estado meteorolóxico muda (inicio ou remate de chuvascos, chuvia, despexado, nubes e claros, néboas ou caída da noite), con priorización de fenómenos adversos e resolución intelixente de conflitos para evitar calquera solapamento.
+    * **Marcador dinámico *Agora* (*Now*)**: Posicionamento en tempo real aliñado co fuso horario local.
+    * **Demarcación de xornadas**: Indicadores de cambio de día (`00h`) en letra grosa para unha navegación temporal intuitiva.
+    * **Tooltip estruturado en 3 liñas**: Ao pasar o rato amosa o día e hora exacta, a temperatura con descrición do ceo, e a probabilidade de choiva (ex: `Luns, 19 ás 14:00 \n 18°C · Despexado \n Choiva: 25%`).
+    * **Interacción directa**: Clic en calquera hora do timeline sincroniza a predición horaria instantaneamente.
   * **Comentario oficial**: Análise sinóptica redactada polos meteorólogos de MeteoGalicia sobre a evolución atmosférica en Galicia.
   * **Indicadores ambientais**: Índice de Calidade do Aire (ICA) e Índice de Radiación Ultravioleta máximo (UV).
   * **Acceso directo**: Botón para abrir a predición do concello na web oficial de MeteoGalicia.
@@ -88,6 +97,7 @@ O plugin pódese configurar dende o centro de control de Noctalia ou editando as
 | `refresh_minutes`| `int` | `30` | Frecuencia de actualización en minutos (mínimo 5, máximo 180). |
 | `show_town_name` | `bool` | `false` | Amosa o nome do concello xunto ao glifo na barra. |
 | `show_rain_prob` | `bool` | `true` | Amosa a probabilidade de choiva na barra se é superior ao 0%. |
+| `show_hourly_cards` | `bool` | `false` | Amosa o carrusel de tarxetas horarias no panel (oculto por defecto ao integrarse o timeline no gráfico). |
 | `hours_count` | `int` | `48` | Número de horas solicitadas á API e dispoñibles para navegar (12, 24, 36 ou 48). |
 | `show_daily_summary` | `bool` | `true` | Amosa o gráfico de predición e temperaturas dos vindeiros días. |
 | `show_daily_hourly_curve` | `bool` | `true` | Amosa a liña continua de temperaturas horarias dentro do gráfico diario. |
