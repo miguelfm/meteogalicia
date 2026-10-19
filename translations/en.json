@@ -13,6 +13,8 @@
   "settings.hours_count.description": "Number of upcoming hourly entries in the panel (up to 48 hours organized in 12h blocks).",
   "settings.show_daily_summary.label": "Show daily summary in panel",
   "settings.show_daily_summary.description": "Displays the smoothed daily trend chart (Today, Tomorrow...) beneath the hourly forecast.",
+  "settings.show_daily_hourly_curve.label": "Show hourly curve in daily chart",
+  "settings.show_daily_hourly_curve.description": "Draws the continuous hourly temperature curve inside the daily trend chart.",
   "settings.ui_scale.label": "Panel, font, and icon size",
   "settings.ui_scale.description": "Adjusts the overall scale of panel, text, and icons proportionally to improve readability.",
   "settings.ui_scale.option.normal": "Normal",

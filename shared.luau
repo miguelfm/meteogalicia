@@ -406,11 +406,24 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     local minVal = 999
     local maxVal = -999
     for _, d in ipairs(dailyDays) do
-        local tMin = tonumber(d.tempMin) or 0
-        local tMax = tonumber(d.tempMax) or 0
-        if tMin < minVal then minVal = tMin end
-        if tMax > maxVal then maxVal = tMax end
+        local tMinD = tonumber(d.tempMin) or 0
+        local tMaxD = tonumber(d.tempMax) or 0
+        if tMinD < minVal then minVal = tMinD end
+        if tMaxD > maxVal then maxVal = tMaxD end
     end
+
+    local hourlyList = (opts and opts.hourly) or {}
+    local showHourly = (opts and opts.showHourlyLine ~= false) and (#hourlyList > 0)
+    if showHourly then
+        for _, h in ipairs(hourlyList) do
+            local t = tonumber(h.temp)
+            if t then
+                if t < minVal then minVal = t end
+                if t > maxVal then maxVal = t end
+            end
+        end
+    end
+
     if minVal == 999 then minVal = 10 end
     if maxVal == -999 then maxVal = 20 end
 
@@ -444,6 +457,60 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     end
     local revMinCurve = buildSmoothBezierPath(revMinPts)
     local areaPath = maxCurve .. string.format(" L %.1f %.1f ", minPts[#minPts].x, minPts[#minPts].y) .. string.sub(revMinCurve, 2) .. " Z"
+
+    -- Curva horaria continua (48h/72h) que amosa a evolución real da temperatura sen sobrecargar con números
+    local hourlyPath = ""
+    local nowX = nil
+    local nowY = nil
+    if showHourly and #hourlyList >= 2 then
+        local day0StartTs = 0
+        if dailyDays[1] and dailyDays[1].year and dailyDays[1].year > 0 then
+            day0StartTs = os.time({
+                year = dailyDays[1].year,
+                month = dailyDays[1].month,
+                day = dailyDays[1].day,
+                hour = 0,
+                min = 0,
+                sec = 0,
+            })
+        else
+            day0StartTs = tonumber(hourlyList[1].timestamp) or 0
+        end
+
+        local hourlyPts: { ChartPoint } = {}
+        for _, h in ipairs(hourlyList) do
+            local ts = tonumber(h.timestamp) or 0
+            local diffSec = ts - day0StartTs
+            if diffSec >= 0 then
+                local dayFrac = diffSec / 86400.0
+                if dayFrac <= n then
+                    local hX = padLeft + dayFrac * colW
+                    local hY = yTemp(tonumber(h.temp) or 0)
+                    hourlyPts[#hourlyPts + 1] = { x = hX, y = hY }
+                end
+            end
+        end
+
+        if #hourlyPts >= 2 then
+            hourlyPath = buildSmoothBezierPath(hourlyPts)
+        end
+
+        -- Posición do momento actual (Agora) sobre a curva
+        local nowSec = (opts and opts.nowTimestamp) or os.time()
+        local nowDiff = nowSec - day0StartTs
+        if nowDiff >= 0 then
+            local nowFrac = nowDiff / 86400.0
+            if nowFrac <= n then
+                nowX = padLeft + nowFrac * colW
+                local cTemp = opts and opts.currentTemp
+                if cTemp then
+                    nowY = yTemp(tonumber(cTemp) or 0)
+                elseif #hourlyPts > 0 then
+                    nowY = hourlyPts[1].y
+                end
+            end
+        end
+    end
 
     local isDark = true
     if opts and opts.isDark ~= nil then
@@ -495,6 +562,12 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         windCircleStroke = isDark and "#222838" or "#cbd5e1",
         windArrow = isDark and "#94a3b8" or "#475569",
         windText = isDark and "#cbd5e1" or (colors.onSurface or "#334155"),
+
+        -- Curva horaria continua (48h/72h)
+        hourlyStroke = isDark and "#f1f5f9" or "#334155",
+        hourlyGlow = isDark and "rgba(241, 245, 249, 0.16)" or "rgba(51, 65, 85, 0.12)",
+        nowDotFill = isDark and "#ff9800" or "#d97706",
+        nowDotRing = isDark and "#141720" or (colors.surfaceVariant or "#e9efef"),
     }
 
     local svgParts = {}
@@ -547,9 +620,28 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     svgParts[#svgParts + 1] = string.format([[
   <!-- Rango térmico -->
   <path d="%s" fill="url(#tempArea)"/>
+]], areaPath)
+
+    if hourlyPath ~= "" then
+        svgParts[#svgParts + 1] = string.format([[
+  <!-- Curva de temperatura horaria continua (sen números para manter o gráfico despexado) -->
+  <path d="%s" fill="none" stroke="%s" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.16"/>
+  <path d="%s" fill="none" stroke="%s" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.88"/>
+]], hourlyPath, theme.hourlyGlow, hourlyPath, theme.hourlyStroke)
+
+        if nowX and nowY then
+            svgParts[#svgParts + 1] = string.format([[
+  <!-- Indicador do momento actual (Agora) sobre a curva horaria -->
+  <circle cx="%.1f" cy="%.1f" r="6.5" fill="%s" fill-opacity="0.25"/>
+  <circle cx="%.1f" cy="%.1f" r="3.8" fill="%s" stroke="%s" stroke-width="1.8"/>
+]], nowX, nowY, theme.nowDotFill, nowX, nowY, theme.nowDotFill, theme.nowDotRing)
+        end
+    end
+
+    svgParts[#svgParts + 1] = string.format([[
   <path d="%s" fill="none" stroke="%s" stroke-width="3.2" stroke-linecap="round"/>
   <path d="%s" fill="none" stroke="%s" stroke-width="3.2" stroke-linecap="round"/>
-]], areaPath, maxCurve, theme.maxTempStroke, minCurve, theme.minTempStroke)
+]], maxCurve, theme.maxTempStroke, minCurve, theme.minTempStroke)
 
     -- Puntos térmicos con números limpos (sen frechas redundantes)
     for i, d in ipairs(dailyDays) do

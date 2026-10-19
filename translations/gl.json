@@ -13,6 +13,8 @@
   "settings.hours_count.description": "Número de horas futuras a amosar na tira horaria do panel (ata 48 horas organizadas en bloques de 12h).",
   "settings.show_daily_summary.label": "Amosar resumo diario no panel",
   "settings.show_daily_summary.description": "Amosa o gráfico de tendencias dos vindeiros días (Hoxe, Mañá...) debaixo da información horaria.",
+  "settings.show_daily_hourly_curve.label": "Amosar curva horaria no gráfico diario",
+  "settings.show_daily_hourly_curve.description": "Debuxa a liña continua da evolución horaria da temperatura dentro do gráfico diario.",
   "settings.ui_scale.label": "Tamaño do panel, letra e iconas",
   "settings.ui_scale.description": "Axusta o tamaño global do panel, textos e iconas mantendo as proporcións para facilitar a lectura.",
   "settings.ui_scale.option.normal": "Normal",

@@ -719,6 +719,8 @@ render = function()
     -- ── 3. RESUMO DIARIO (VINDEIROS DÍAS) ────────────────────────────────────
     local showDailySummary = noctalia.getConfig("show_daily_summary")
     if showDailySummary == nil then showDailySummary = true end
+    local showDailyHourlyCurve = noctalia.getConfig("show_daily_hourly_curve")
+    if showDailyHourlyCurve == nil then showDailyHourlyCurve = true end
 
     local dailyDays = weather.dailyDays or {}
     if showDailySummary and #dailyDays > 0 then
@@ -754,6 +756,10 @@ render = function()
             tomorrowLabel = tr("ui.tomorrow", "Mañá"),
             isDark = isDark,
             colors = colors,
+            hourly = weather.hourlyCurve or weather.hourly,
+            showHourlyLine = showDailyHourlyCurve,
+            nowTimestamp = os.time(),
+            currentTemp = weather.current and weather.current.temp,
         })
         local themeSuffix = isDark and "dark" or "light"
         local chartPath = string.format("/tmp/meteogalicia_daily_trend_%s.svg", themeSuffix)

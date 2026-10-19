@@ -306,6 +306,17 @@ local function poll()
                 local tomorrowDateStr = os.date("%Y-%m-%d", nowSec + 86400)
                 local currentEntry = nil
                 local processedHours = {}
+                local hourlyCurve = {}
+                local seenCurveTs: { [number]: boolean } = {}
+
+                -- Inicio do día de hoxe (00:00:00) para aliñar a liña no gráfico
+                local todayStartSec = 0
+                if #dailyDays > 0 and dailyDays[1].year > 0 then
+                    todayStartSec = os.time({ year = dailyDays[1].year, month = dailyDays[1].month, day = dailyDays[1].day, hour = 0, min = 0, sec = 0 })
+                else
+                    local tParts = os.date("*t", nowSec)
+                    todayStartSec = os.time({ year = tParts.year, month = tParts.month, day = tParts.day, hour = 0, min = 0, sec = 0 })
+                end
 
                 for _, h in ipairs(combinedHours) do
                     local ms = tonumber(h.date) or 0
@@ -343,9 +354,18 @@ local function poll()
                         currentEntry = item
                     end
 
-                    -- Engadir horas dende a hora actual en adiante (ata 48 horas)
+                    -- Engadir horas dende a hora actual en adiante para a tira do panel (ata 48 horas)
                     if sec >= currentHourSec and #processedHours < 48 then
                         processedHours[#processedHours + 1] = item
+                    end
+
+                    -- Engadir á curva horaria continua dende o comezo de hoxe para o gráfico diario
+                    if sec >= todayStartSec and not seenCurveTs[sec] then
+                        seenCurveTs[sec] = true
+                        hourlyCurve[#hourlyCurve + 1] = {
+                            timestamp = sec,
+                            temp = h.averageTemperature or 0,
+                        }
                     end
                 end
 
@@ -374,6 +394,7 @@ local function poll()
                     today = todayInfo,
                     dailyDays = dailyDays,
                     hourly = processedHours,
+                    hourlyCurve = hourlyCurve,
                     updatedAt = os.date("%H:%M"),
                 }
 

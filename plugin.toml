@@ -70,6 +70,13 @@ description_key = "settings.show_daily_summary.description"
 default = true
 
 [[setting]]
+key = "show_daily_hourly_curve"
+type = "bool"
+label_key = "settings.show_daily_hourly_curve.label"
+description_key = "settings.show_daily_hourly_curve.description"
+default = true
+
+[[setting]]
 key = "ui_scale"
 type = "select"
 label_key = "settings.ui_scale.label"
