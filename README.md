@@ -23,7 +23,11 @@ Plugin nativo para o shell de escritorio **Noctalia** (en Wayland / Hyprland) qu
 * **Panel Emerxente Completo (`panel`)**:
   * **Cabeceira de condicións actuais**:
     * Glifo de gran formato, concello e descrición sinóptica xeral.
-    * **Buscador interactivo de concellos**: Botón de busca xunto ao nome do municipio (ou premendo <kbd>F</kbd> / <kbd>/</kbd>) que desprega un selector rápido con filtro polas 4 provincias galegas (*Todas*, *A Coruña*, *Lugo*, *Ourense*, *Pontevedra*), busca insensible a tiles e códigos INE dos 313 concellos de Galicia, actualizando e persistindo a predición ao instante.
+    * **Buscador interactivo de concellos**: Botón de busca xunto ao nome do municipio (ou premendo <kbd>F</kbd> / <kbd>/</kbd>) que desprega un selector rápido e amplo:
+      * **Caixa de busca de ancho completo**: Campo de entrada con foco automático inmediato (`focus = true`), atallo rápido <kbd>Esc</kbd> e botón de peche visible.
+      * **Filtros por provincia e reconto dinámico**: Fila independente con pestanas rápidas (*Todas*, *A Coruña*, *Lugo*, *Ourense*, *Pontevedra*) e reconto en tempo real de resultados (ex: *313 concellos*).
+      * **Grella a 3 columnas amplas**: Disposición espazosa a 3 columnas (ou 2 en pantallas máis estreitas) deseñada para acomodar con total folgura nomes compostos e longos (ex: *Barco de Valdeorras (O)*, *Xunqueira de Espadanedo*, *Pobra do Caramiñal (A)*), amosando nome destacado en negriña, provincia, código INE e marca de verificación (✓) no municipio activo.
+      * **Desprazamento vertical fluído**: Listaxe con altura fixa calibrada (`height = 280`), filtrado insensible a maiúsculas/tiles e persistencia inmediata en `settings.toml` mediante `set_concello.py`.
     * Bloque central con 5 tarxetas métricas homoxéneas:
       * **Horarios solares**: Orto (amencer) e Ocaso (solpor) calculados astronomicamente polas coordenadas exactas do municipio.
       * **Vento actual**: Frecha vectorial de orientación real de compás (`↑`, `↗`, `→`, `↘`, `↓`, `↙`, `←`, `↖`), velocidade instantánea en km/h e descrición oficial no *tooltip*.
@@ -52,7 +56,7 @@ Plugin nativo para o shell de escritorio **Noctalia** (en Wayland / Hyprland) qu
     * **Tooltip estruturado en 4 liñas**: Ao pasar o rato amosa data e hora, temperatura con descrición do ceo, probabilidade de choiva e vento previsto (ex: `Luns, 19 out ás 14:00 \n 18°C · Nubes e Claros \n Choiva: 25% \n Vento: Nordés feble (10 km/h)`).
     * **Barra diúrno/nocturna astronómica (`dayNightBar`)**: Situada xusto debaixo da tarxeta de choiva/vento e sincronizada ao píxel coas 96 horas, con cápsulas diúrnas douradas que presentan a radiación ultravioleta máxima (`☀️ UV`) e a calidade do aire (`🍃 ICA`), pistas nocturnas con símbolo lunar e separadores verticais a medianoite.
     * **Interacción directa**: Clic en calquera hora do timeline ou da barra solar sincroniza a predición horaria instantaneamente.
-  * **Comentario oficial**: Análise sinóptica redactada polos meteorólogos de MeteoGalicia sobre a evolución atmosférica en Galicia.
+  * **Comentario oficial (*Evolución xeral* / *Outlook*)**: Análise sinóptica oficial redactada polos meteorólogos de MeteoGalicia sobre a evolución atmosférica en Galicia.
   * **Pé de páxina informativo**: Índice UV máximo previsto da xornada, estación meteorolóxica de referencia empregada para as lecturas actuais e hora da última sincronización.
   * **Acceso directo**: Botón para abrir a predición do concello na web oficial de MeteoGalicia.
 * **Cero dependencias externas**: Desenvolvido 100% en Luau nativo usando as APIs asíncronas de Noctalia (`noctalia.http`, `noctalia.state`, `noctalia.ui`).
