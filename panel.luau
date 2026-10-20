@@ -742,50 +742,21 @@ render = function()
         local matches = filterConcellos()
         local curConcelloId = (weather and weather.concelloId) or tonumber(noctalia.state.get("concello_id")) or 15035
 
-        local searchInputRow = ui.row({ gap = 8, align = "center" }, {
-            ui.glyph({ name = "search", size = 20, color = "primary" }),
+        -- Fila 1: Caixa de busca principal de largo completo
+        local searchInputRow = ui.row({ gap = 12, align = "center", flexGrow = 1 }, {
+            ui.glyph({ name = "search", size = 22, color = "primary" }),
             ui.input({
                 value = concelloSearchQuery,
                 placeholder = tr("ui.search_concello_placeholder", "Buscar concello ou código INE…"),
                 onChange = "onConcelloSearchChange",
                 onSubmit = "onConcelloSearchSubmit",
                 controlSize = s.btnSize,
+                fontSize = math.max(14, math.floor(s.hourlyTemp * 0.95)),
                 flexGrow = 1,
-            }),
-            ui.row({ gap = 4, align = "center" }, {
-                ui.button({
-                    text = tr("ui.all_provinces", "Todas"),
-                    variant = (selectedProvince == nil) and "primary" or "ghost",
-                    controlSize = s.btnSize,
-                    onClick = "onSelectProvinceAll",
-                }),
-                ui.button({
-                    text = tr("ui.province_coruna", "A Coruña"),
-                    variant = (selectedProvince == 15) and "primary" or "ghost",
-                    controlSize = s.btnSize,
-                    onClick = "onSelectProvinceCoruna",
-                }),
-                ui.button({
-                    text = tr("ui.province_lugo", "Lugo"),
-                    variant = (selectedProvince == 27) and "primary" or "ghost",
-                    controlSize = s.btnSize,
-                    onClick = "onSelectProvinceLugo",
-                }),
-                ui.button({
-                    text = tr("ui.province_ourense", "Ourense"),
-                    variant = (selectedProvince == 32) and "primary" or "ghost",
-                    controlSize = s.btnSize,
-                    onClick = "onSelectProvinceOurense",
-                }),
-                ui.button({
-                    text = tr("ui.province_pontevedra", "Pontevedra"),
-                    variant = (selectedProvince == 36) and "primary" or "ghost",
-                    controlSize = s.btnSize,
-                    onClick = "onSelectProvincePontevedra",
-                }),
             }),
             ui.button({
                 glyph = "x",
+                text = tr("ui.close", "Pechar"),
                 variant = "ghost",
                 tooltip = tr("ui.search_concello_close", "Pechar busca (Esc)"),
                 controlSize = s.btnSize,
@@ -793,42 +764,95 @@ render = function()
             }),
         })
 
-        local numCols = (s.chartWidth >= 1100) and 4 or 3
+        -- Fila 2: Filtros de provincias e reconto de resultados
+        local countStr = (#matches == 1)
+            and tr("ui.municipality_count", "1 concello")
+            or string.format(tr("ui.municipalities_count", "%d concellos"), #matches)
+
+        local filterRow = ui.row({ gap = 8, align = "center" }, {
+            ui.label({
+                text = tr("ui.province_label", "Provincia:"),
+                fontSize = math.max(12, math.floor(s.dailyDesc * 0.95)),
+                fontWeight = "bold",
+                color = "on_surface_variant",
+            }),
+            ui.button({
+                text = tr("ui.all_provinces", "Todas"),
+                variant = (selectedProvince == nil) and "primary" or "secondary",
+                controlSize = s.btnSize,
+                onClick = "onSelectProvinceAll",
+            }),
+            ui.button({
+                text = tr("ui.province_coruna", "A Coruña"),
+                variant = (selectedProvince == 15) and "primary" or "ghost",
+                controlSize = s.btnSize,
+                onClick = "onSelectProvinceCoruna",
+            }),
+            ui.button({
+                text = tr("ui.province_lugo", "Lugo"),
+                variant = (selectedProvince == 27) and "primary" or "ghost",
+                controlSize = s.btnSize,
+                onClick = "onSelectProvinceLugo",
+            }),
+            ui.button({
+                text = tr("ui.province_ourense", "Ourense"),
+                variant = (selectedProvince == 32) and "primary" or "ghost",
+                controlSize = s.btnSize,
+                onClick = "onSelectProvinceOurense",
+            }),
+            ui.button({
+                text = tr("ui.province_pontevedra", "Pontevedra"),
+                variant = (selectedProvince == 36) and "primary" or "ghost",
+                controlSize = s.btnSize,
+                onClick = "onSelectProvincePontevedra",
+            }),
+            ui.spacer(),
+            ui.label({
+                text = countStr,
+                fontSize = math.max(12, math.floor(s.dailyDesc * 0.95)),
+                fontWeight = "bold",
+                color = "on_surface_variant",
+            }),
+        })
+
+        local numCols = (s.chartWidth >= 1100) and 3 or 2
+        local cardMinWidth = math.floor((s.chartWidth - (numCols * 10) - 50) / numCols)
         local gridRows = {}
         local currentRow = {}
 
         for idx, c in ipairs(matches) do
             local isCurrent = (c.id == curConcelloId)
             local card = ui.row({
-                gap = 8,
+                gap = 10,
                 align = "center",
                 justify = "space-between",
-                paddingH = 10,
-                paddingV = 6,
-                radius = 8,
+                paddingH = math.max(14, math.floor(s.panelPadding * 0.6)),
+                paddingV = math.max(10, math.floor(s.panelPadding * 0.45)),
+                radius = 10,
+                minWidth = cardMinWidth,
                 fill = isCurrent and cardBgActive or cardBgNorm,
                 border = isCurrent and "primary" or "outline/0.25",
                 borderWidth = 1,
                 flexGrow = 1,
-                tooltip = string.format("%s (%s • %d)", c.name, c.province, c.id),
+                tooltip = string.format("%s (%s • Código INE %d)", c.name, c.province, c.id),
                 onClick = function()
                     onSelectConcello(c.id, c.name)
                 end,
             }, {
-                ui.column({ gap = 1, align = "start", flexGrow = 1 }, {
+                ui.column({ gap = 3, align = "start", flexGrow = 1 }, {
                     ui.label({
                         text = c.name,
-                        fontSize = math.max(12, math.floor(s.hourlyTemp * 0.95)),
-                        fontWeight = isCurrent and "bold" or "normal",
+                        fontSize = math.max(14, math.floor(s.headerDesc * 0.95)),
+                        fontWeight = "bold",
                         color = isCurrent and "primary" or "on_surface",
                     }),
                     ui.label({
-                        text = string.format("%s • %d", c.province, c.id),
-                        fontSize = math.max(9, math.floor(s.hourlyTime * 0.85)),
+                        text = string.format("%s · INE %d", c.province, c.id),
+                        fontSize = math.max(11, math.floor(s.dailyDesc * 0.9)),
                         color = "on_surface_variant",
                     }),
                 }),
-                isCurrent and ui.glyph({ name = "check", size = 16, color = "primary" }) or nil,
+                isCurrent and ui.glyph({ name = "check", size = 18, color = "primary" }) or nil,
             })
 
             table.insert(currentRow, card)
@@ -836,17 +860,17 @@ render = function()
             if #currentRow == numCols or idx == #matches then
                 if #currentRow < numCols then
                     for _ = #currentRow + 1, numCols do
-                        table.insert(currentRow, ui.spacer({ flexGrow = 1 }))
+                        table.insert(currentRow, ui.spacer({ minWidth = cardMinWidth, flexGrow = 1 }))
                     end
                 end
-                table.insert(gridRows, ui.row({ gap = 6, align = "center" }, currentRow))
+                table.insert(gridRows, ui.row({ gap = 8, align = "center" }, currentRow))
                 currentRow = {}
             end
         end
 
         local listContent
         if #matches == 0 then
-            listContent = ui.row({ align = "center", justify = "center", padding = 16 }, {
+            listContent = ui.row({ align = "center", justify = "center", padding = 24 }, {
                 ui.label({
                     text = tr("ui.no_concellos_found", "Non se atoparon concellos"),
                     fontSize = s.hourlyTemp,
@@ -854,25 +878,26 @@ render = function()
                 }),
             })
         else
-            listContent = ui.column({ gap = 6 }, gridRows)
+            listContent = ui.column({ gap = 8 }, gridRows)
         end
 
         local scrollContainer = ui.scroll({
-            maxHeight = 220,
+            maxHeight = 300,
             flexGrow = 1,
         }, {
             listContent,
         })
 
         local pickerBox = ui.column({
-            gap = 10,
-            padding = 12,
-            radius = 14,
+            gap = 12,
+            padding = math.max(14, math.floor(s.panelPadding * 0.75)),
+            radius = 16,
             fill = cardBgNorm,
             border = "primary/0.4",
             borderWidth = 1,
         }, {
             searchInputRow,
+            filterRow,
             ui.separator(),
             scrollContainer,
         })
