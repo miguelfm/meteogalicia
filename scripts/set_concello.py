@@ -28,17 +28,18 @@ try:
             rest = ""
         if not sec.startswith("\n"):
             sec = "\n" + sec
+        int_cid = int(cid)
         if re.search(r'^\s*concello_id\s*=', sec, re.M):
-            sec = re.sub(r'^\s*concello_id\s*=.*$', f'concello_id = "{cid}"', sec, flags=re.M)
+            sec = re.sub(r'^\s*concello_id\s*=.*$', f'concello_id = {int_cid}', sec, flags=re.M)
         else:
-            sec = f'\nconcello_id = "{cid}"' + sec
+            sec = f'\nconcello_id = {int_cid}' + sec
         if re.search(r'^\s*concello_name\s*=', sec, re.M):
             sec = re.sub(r'^\s*concello_name\s*=.*$', f'concello_name = "{cname}"', sec, flags=re.M)
         else:
             sec = f'\nconcello_name = "{cname}"' + sec
         text = parts[0] + header + "\n" + sec.strip("\n") + "\n\n" + rest.lstrip("\n")
     else:
-        text += f'\n\n{header}\nconcello_id = "{cid}"\nconcello_name = "{cname}"\n'
+        text += f'\n\n{header}\nconcello_id = {int(cid)}\nconcello_name = "{cname}"\n'
 
     with open(path, "w", encoding="utf-8") as f:
         f.write(text)

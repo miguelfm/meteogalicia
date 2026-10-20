@@ -13,10 +13,10 @@ dependencies = []
 
 [[setting]]
 key = "concello_id"
-type = "string"
+type = "int"
 label_key = "settings.concello_id.label"
 description_key = "settings.concello_id.description"
-default = "15035"
+default = 15035
 
 [[setting]]
 key = "concello_name"
@@ -115,7 +115,7 @@ id = "bar"
 entry = "bar.luau"
 
   [widget.actions]
-  right = "plugin miguelfm/meteogalicia:poller refresh"
+  right = "plugin miguelfm/meteogalicia:poller all refresh"
 
 [[panel]]
 id = "panel"

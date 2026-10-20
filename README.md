@@ -103,7 +103,7 @@ O plugin pódese configurar dende o centro de control de Noctalia ou editando as
 
 | Clave | Tipo | Valor por defecto | Descrición |
 | :--- | :--- | :--- | :--- |
-| `concello_id` | `string` | `"15035"` | Código INE do concello (campo de texto sen selector deslizante). Tamén seleccionable de xeito inmediato no panel emerxente con <kbd>F</kbd>. |
+| `concello_id` | `int` | `15035` | Código INE do concello (campo numérico sen selector deslizante). Tamén seleccionable de xeito inmediato no panel emerxente con <kbd>F</kbd>. |
 | `concello_name` | `string` | `Fene` | Nome amosado na barra e na cabeceira do panel. |
 | `refresh_minutes`| `int` | `30` | Frecuencia de actualización en minutos (mínimo 5, máximo 180). |
 | `show_town_name` | `bool` | `false` | Amosa o nome do concello xunto ao glifo na barra. |
