@@ -23,6 +23,7 @@ Plugin nativo para o shell de escritorio **Noctalia** (en Wayland / Hyprland) qu
 * **Panel Emerxente Completo (`panel`)**:
   * **Cabeceira de condicións actuais**:
     * Glifo de gran formato, concello e descrición sinóptica xeral.
+    * **Buscador interactivo de concellos**: Botón de busca xunto ao nome do municipio (ou premendo <kbd>F</kbd> / <kbd>/</kbd>) que desprega un selector rápido con filtro polas 4 provincias galegas (*Todas*, *A Coruña*, *Lugo*, *Ourense*, *Pontevedra*), busca insensible a tiles e códigos INE dos 313 concellos de Galicia, actualizando e persistindo a predición ao instante.
     * Bloque central con 5 tarxetas métricas homoxéneas:
       * **Horarios solares**: Orto (amencer) e Ocaso (solpor) calculados astronomicamente polas coordenadas exactas do municipio.
       * **Vento actual**: Frecha vectorial de orientación real de compás (`↑`, `↗`, `→`, `↘`, `↓`, `↙`, `←`, `↖`), velocidade instantánea en km/h e descrición oficial no *tooltip*.
@@ -64,6 +65,7 @@ Cando o panel estea aberto, pódense empregar os seguintes controis e atallos di
 
 | Tecla / Xesto | Acción |
 | :--- | :--- |
+| <kbd>F</kbd> ou <kbd>/</kbd> | Abrir / pechar o **buscador interactivo de concellos** (313 municipios) |
 | <kbd>←</kbd> (Frecha Esquerda) ou <kbd>[</kbd> | Desprazar a predición horaria **1 hora cara atrás** |
 | <kbd>→</kbd> (Frecha Dereita) ou <kbd>]</kbd> | Desprazar a predición horaria **1 hora cara adiante** |
 | <kbd>Re Páx</kbd> (Page Up) | Retroceder **12 horas** (bloque anterior) |
@@ -73,7 +75,7 @@ Cando o panel estea aberto, pódense empregar os seguintes controis e atallos di
 | **Roda do rato** | Desprazar hora a hora (tanto sobre o panel como sobre a cápsula da barra) |
 | <kbd>R</kbd> | Forzar a actualización inmediata dos datos dende a API |
 | <kbd>S</kbd> / <kbd>C</kbd> | Abrir a xanela de axustes do plugin en Noctalia |
-| <kbd>Esc</kbd> | Pechar o panel emerxente |
+| <kbd>Esc</kbd> | Pechar a busca de concellos / Pechar o panel emerxente |
 
 ---
 
@@ -101,7 +103,7 @@ O plugin pódese configurar dende o centro de control de Noctalia ou editando as
 
 | Clave | Tipo | Valor por defecto | Descrición |
 | :--- | :--- | :--- | :--- |
-| `concello_id` | `int` | `15035` | Código INE do concello (ex: `15035` Fene, `15036` Ferrol, `15030` A Coruña, `15078` Santiago, `36057` Vigo, `32054` Ourense, `27028` Lugo, `36038` Pontevedra). |
+| `concello_id` | `string` | `"15035"` | Código INE do concello (campo de texto sen selector deslizante). Tamén seleccionable de xeito inmediato no panel emerxente con <kbd>F</kbd>. |
 | `concello_name` | `string` | `Fene` | Nome amosado na barra e na cabeceira do panel. |
 | `refresh_minutes`| `int` | `30` | Frecuencia de actualización en minutos (mínimo 5, máximo 180). |
 | `show_town_name` | `bool` | `false` | Amosa o nome do concello xunto ao glifo na barra. |
@@ -119,14 +121,17 @@ O plugin pódese configurar dende o centro de control de Noctalia ou editando as
 
 ```text
 meteogalicia/
-├── plugin.toml       # Manifesto do plugin, axustes e definición de compoñentes
-├── bar.luau          # Widget da barra (cápsula, tooltip, eventos de clic e scroll)
-├── panel.luau        # Panel emerxente interactivo (UI reactiva, navegación, atallos de teclado)
-├── service.luau      # Servizo en segundo plano (peticións HTTP a meteo2api e observacións en tempo real)
-├── stations.luau     # Catálogo oficial de estacións meteorolóxicas e coordenadas para humidade en tempo real
-├── shared.luau       # Mapeo de códigos MeteoGalicia, xerador de gráfico SVG e utilidades
-├── translations/     # Internacionalización (gl.json en galego, en.json en inglés)
-└── LICENSE           # Licenza MIT
+├── plugin.toml            # Manifesto do plugin, axustes e definición de compoñentes
+├── bar.luau               # Widget da barra (cápsula, tooltip, eventos de clic e scroll)
+├── panel.luau             # Panel emerxente interactivo (UI reactiva, navegación, buscador de concellos)
+├── service.luau           # Servizo en segundo plano (peticións HTTP a meteo2api e observacións en tempo real)
+├── concellos.luau         # Catálogo oficial dos 313 concellos de Galicia con coordenadas e códigos INE
+├── stations.luau          # Catálogo oficial de estacións meteorolóxicas e coordenadas para humidade en tempo real
+├── shared.luau            # Mapeo de códigos MeteoGalicia, xerador de gráfico SVG e utilidades
+├── scripts/
+│   └── set_concello.py    # Script auxiliar para persistir a selección de concello en settings.toml
+├── translations/          # Internacionalización (gl.json en galego, en.json en inglés)
+└── LICENSE                # Licenza MIT
 ```
 
 ---

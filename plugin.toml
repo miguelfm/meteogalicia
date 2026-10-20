@@ -13,13 +13,10 @@ dependencies = []
 
 [[setting]]
 key = "concello_id"
-type = "int"
+type = "string"
 label_key = "settings.concello_id.label"
 description_key = "settings.concello_id.description"
-default = 15035
-min = 10000
-max = 99999
-step = 1
+default = "15035"
 
 [[setting]]
 key = "concello_name"

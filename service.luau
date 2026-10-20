@@ -5,45 +5,21 @@
 
 local shared = require("./shared.luau")
 local stations = require("./stations.luau")
+local concellos = require("./concellos.luau")
+
+local concellosMap: { [number]: concellos.Concello } = {}
+for _, c in ipairs(concellos) do
+    concellosMap[c.id] = c
+end
 
 local inFlight = false
 
-local concellosCoords: { [number]: { lat: number, lon: number } } = {
-    [15035] = { lat = 43.475156, lon = -8.167317 }, -- Fene
-    [15036] = { lat = 43.483212, lon = -8.236944 }, -- Ferrol
-    [15030] = { lat = 43.371350, lon = -8.418800 }, -- A Coruña
-    [15078] = { lat = 42.878213, lon = -8.544844 }, -- Santiago
-    [36057] = { lat = 42.232820, lon = -8.722640 }, -- Vigo
-    [36038] = { lat = 42.433611, lon = -8.647500 }, -- Pontevedra
-    [32054] = { lat = 42.336667, lon = -7.864167 }, -- Ourense
-    [27028] = { lat = 43.009923, lon = -7.556019 }, -- Lugo
-}
-local concellosLoaded = false
-
-local function ensureConcellosCoords(headers: { string })
-    if concellosLoaded then return end
-    concellosLoaded = true
-    noctalia.http({
-        url = shared.BASE_API .. "concellos",
-        method = "GET",
-        headers = headers,
-    }, function(res)
-        if res and res.ok and res.status == 200 then
-            local list = noctalia.json.decode(res.body or "[]")
-            if type(list) == "table" then
-                for _, item in ipairs(list) do
-                    if item.id and item.latitude and item.longitude then
-                        concellosCoords[item.id] = { lat = item.latitude, lon = item.longitude }
-                    end
-                end
-            end
-        end
-    end)
-end
-
 local function getConfig()
-    local concelloId = tonumber(noctalia.getConfig("concello_id")) or 15035
-    local concelloName = tostring(noctalia.getConfig("concello_name") or "Fene")
+    local stateId = noctalia.state.get("concello_id")
+    local concelloId = tonumber(stateId) or tonumber(noctalia.getConfig("concello_id")) or 15035
+    local cInfo = concellosMap[concelloId]
+    local stateName = noctalia.state.get("concello_name")
+    local concelloName = tostring(stateName or noctalia.getConfig("concello_name") or (cInfo and cInfo.name) or "Fene")
     local refreshMinutes = tonumber(noctalia.getConfig("refresh_minutes")) or 30
     if refreshMinutes < 5 then refreshMinutes = 5 end
     return concelloId, concelloName, refreshMinutes
@@ -62,7 +38,6 @@ local function poll()
         "Accept: application/json",
         "Accept-Language: gl",
     }
-    ensureConcellosCoords(headers)
 
     local dailyUrl = shared.BASE_API .. "concellos/predicion/diaria?idConcello=" .. tostring(concelloId) .. "&idioma=gl"
 
@@ -169,7 +144,7 @@ local function poll()
                 local todayShort = shortTermList[1] or {}
                 local cleanComment = shared.cleanHtml(dailyData.comment or "")
 
-                local coords = concellosCoords[concelloId]
+                local coords = concellosMap[concelloId]
                 local lat = (coords and coords.lat) or (dailyData.townHall and dailyData.townHall.latitude) or shared.DEFAULT_LAT
                 local lon = (coords and coords.lon) or (dailyData.townHall and dailyData.townHall.longitude) or shared.DEFAULT_LON
                 local sunrise, sunset = shared.calcSolar(lat, lon, nowSec)
@@ -521,6 +496,13 @@ end
 noctalia.state.watch("weather_request_refresh", function(value)
     if value == true then
         noctalia.state.set("weather_request_refresh", false)
+        poll()
+    end
+end)
+
+-- Rexistrar cambio de concello desde o buscador do panel
+noctalia.state.watch("concello_id", function(value)
+    if value ~= nil then
         poll()
     end
 end)

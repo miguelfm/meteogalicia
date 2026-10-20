@@ -4,11 +4,16 @@
 -- upcoming days forecast with continuous SVG temperature & rain chart, official commentary, and indicators.
 
 local shared = require("./shared.luau")
+local concellos = require("./concellos.luau")
 
 local weather = nil
 local weatherError = nil
 local isLoading = false
 local render: () -> () = function() end
+
+local isSearchingConcello = false
+local concelloSearchQuery = ""
+local selectedProvince: number? = nil
 
 type ScaleConfig = {
     panelPadding: number,
@@ -278,6 +283,93 @@ function onOpenSettings()
     noctalia.runAsync("noctalia msg settings-open-plugin miguelfm/meteogalicia")
 end
 
+local function normalizeStr(s: string): string
+    local res = s:lower()
+    res = res:gsub("á", "a"):gsub("à", "a"):gsub("â", "a"):gsub("ã", "a")
+    res = res:gsub("é", "e"):gsub("è", "e"):gsub("ê", "e")
+    res = res:gsub("í", "i"):gsub("ì", "i"):gsub("î", "i")
+    res = res:gsub("ó", "o"):gsub("ò", "o"):gsub("ô", "o"):gsub("õ", "o")
+    res = res:gsub("ú", "u"):gsub("ù", "u"):gsub("ü", "u")
+    res = res:gsub("ñ", "n")
+    return res
+end
+
+local function filterConcellos(): { concellos.Concello }
+    local q = normalizeStr(concelloSearchQuery:match("^%s*(.-)%s*$") or "")
+    local matches = {}
+    for _, c in ipairs(concellos) do
+        local provMatch = (selectedProvince == nil) or (c.provinceId == selectedProvince)
+        if provMatch then
+            if q == "" then
+                table.insert(matches, c)
+            else
+                local normName = normalizeStr(c.name)
+                local idStr = tostring(c.id)
+                if normName:find(q, 1, true) or idStr:find(q, 1, true) then
+                    table.insert(matches, c)
+                end
+            end
+        end
+    end
+    return matches
+end
+
+function onToggleSearchConcello()
+    isSearchingConcello = not isSearchingConcello
+    if isSearchingConcello then
+        concelloSearchQuery = ""
+    end
+    render()
+end
+
+function onConcelloSearchChange(newText: string)
+    concelloSearchQuery = tostring(newText or "")
+    render()
+end
+
+function onConcelloSearchSubmit(_text: string?)
+    local matches = filterConcellos()
+    if #matches > 0 then
+        local first = matches[1]
+        onSelectConcello(first.id, first.name)
+    end
+end
+
+function onSelectProvinceAll()
+    selectedProvince = nil
+    render()
+end
+
+function onSelectProvinceCoruna()
+    selectedProvince = (selectedProvince == 15) and nil or 15
+    render()
+end
+
+function onSelectProvinceLugo()
+    selectedProvince = (selectedProvince == 27) and nil or 27
+    render()
+end
+
+function onSelectProvinceOurense()
+    selectedProvince = (selectedProvince == 32) and nil or 32
+    render()
+end
+
+function onSelectProvincePontevedra()
+    selectedProvince = (selectedProvince == 36) and nil or 36
+    render()
+end
+
+function onSelectConcello(cId: number, cName: string)
+    noctalia.state.set("concello_id", tostring(cId))
+    noctalia.state.set("concello_name", cName)
+    local cmd = string.format("python3 ~/.config/noctalia/plugins/meteogalicia/scripts/set_concello.py %d %q", cId, cName)
+    noctalia.runAsync(cmd)
+    isSearchingConcello = false
+    noctalia.state.set("weather_request_refresh", true)
+    render()
+end
+
 function onKey(chord: string?, pressed: boolean)
     if not pressed then return end
     local raw = tostring(chord or "")
@@ -285,23 +377,34 @@ function onKey(chord: string?, pressed: boolean)
     local cleanKey = lower:gsub("[_%s%-]", "")
 
     if cleanKey == "escape" then
-        if type(panel.close) == "function" then panel.close() end
-    elseif cleanKey == "r" then
+        if isSearchingConcello then
+            isSearchingConcello = false
+            render()
+        elseif type(panel.close) == "function" then
+            panel.close()
+        end
+    elseif (cleanKey == "f" or cleanKey == "/") and not isSearchingConcello then
+        isSearchingConcello = true
+        concelloSearchQuery = ""
+        render()
+    elseif cleanKey == "r" and not isSearchingConcello then
         onRefresh()
-    elseif cleanKey == "s" or cleanKey == "c" then
+    elseif (cleanKey == "s" or cleanKey == "c") and not isSearchingConcello then
         onOpenSettings()
-    elseif cleanKey == "left" or cleanKey == "arrowleft" or cleanKey == "[" or cleanKey == "bracketleft" or cleanKey:find("%+left$") ~= nil then
-        onStepPrevHour()
-    elseif cleanKey == "right" or cleanKey == "arrowright" or cleanKey == "]" or cleanKey == "bracketright" or cleanKey:find("%+right$") ~= nil then
-        onStepNextHour()
-    elseif cleanKey == "pageup" or cleanKey == "prior" or cleanKey:find("pageup$") ~= nil or cleanKey:find("prior$") ~= nil then
-        onPrevHours()
-    elseif cleanKey == "pagedown" or cleanKey == "next" or cleanKey:find("pagedown$") ~= nil or cleanKey:find("next$") ~= nil then
-        onNextHours()
-    elseif cleanKey == "home" or cleanKey:find("home$") ~= nil then
-        onBlockHours1()
-    elseif cleanKey == "end" or cleanKey:find("end$") ~= nil then
-        onBlockHours4()
+    elseif not isSearchingConcello then
+        if cleanKey == "left" or cleanKey == "arrowleft" or cleanKey == "[" or cleanKey == "bracketleft" or cleanKey:find("%+left$") ~= nil then
+            onStepPrevHour()
+        elseif cleanKey == "right" or cleanKey == "arrowright" or cleanKey == "]" or cleanKey == "bracketright" or cleanKey:find("%+right$") ~= nil then
+            onStepNextHour()
+        elseif cleanKey == "pageup" or cleanKey == "prior" or cleanKey:find("pageup$") ~= nil or cleanKey:find("prior$") ~= nil then
+            onPrevHours()
+        elseif cleanKey == "pagedown" or cleanKey == "next" or cleanKey:find("pagedown$") ~= nil or cleanKey:find("next$") ~= nil then
+            onNextHours()
+        elseif cleanKey == "home" or cleanKey:find("home$") ~= nil then
+            onBlockHours1()
+        elseif cleanKey == "end" or cleanKey:find("end$") ~= nil then
+            onBlockHours4()
+        end
     end
 end
 
@@ -568,11 +671,20 @@ render = function()
             color = cur.color or "primary",
         }),
         ui.column({ gap = 3 }, {
-            ui.label({
-                text = weather.officialName or weather.concelloName or "Fene",
-                fontSize = s.headerTown,
-                fontWeight = "bold",
-                color = "on_surface",
+            ui.row({ gap = 6, align = "center" }, {
+                ui.label({
+                    text = weather.officialName or weather.concelloName or "Fene",
+                    fontSize = s.headerTown,
+                    fontWeight = "bold",
+                    color = "on_surface",
+                }),
+                ui.button({
+                    glyph = isSearchingConcello and "x" or "search",
+                    variant = isSearchingConcello and "primary" or "ghost",
+                    tooltip = isSearchingConcello and tr("ui.search_concello_close", "Pechar busca (Esc)") or tr("ui.search_concello_tooltip", "Buscar concello (F)"),
+                    controlSize = s.btnSize,
+                    onClick = "onToggleSearchConcello",
+                }),
             }),
             ui.label({
                 text = cur.skyDesc or "Predición diaria",
@@ -625,6 +737,148 @@ render = function()
     })
 
     rootChildren[#rootChildren + 1] = headerRow
+
+    if isSearchingConcello then
+        local matches = filterConcellos()
+        local curConcelloId = (weather and weather.concelloId) or tonumber(noctalia.state.get("concello_id")) or 15035
+
+        local searchInputRow = ui.row({ gap = 8, align = "center" }, {
+            ui.glyph({ name = "search", size = 20, color = "primary" }),
+            ui.input({
+                value = concelloSearchQuery,
+                placeholder = tr("ui.search_concello_placeholder", "Buscar concello ou código INE…"),
+                onChange = "onConcelloSearchChange",
+                onSubmit = "onConcelloSearchSubmit",
+                controlSize = s.btnSize,
+                flexGrow = 1,
+            }),
+            ui.row({ gap = 4, align = "center" }, {
+                ui.button({
+                    text = tr("ui.all_provinces", "Todas"),
+                    variant = (selectedProvince == nil) and "primary" or "ghost",
+                    controlSize = s.btnSize,
+                    onClick = "onSelectProvinceAll",
+                }),
+                ui.button({
+                    text = tr("ui.province_coruna", "A Coruña"),
+                    variant = (selectedProvince == 15) and "primary" or "ghost",
+                    controlSize = s.btnSize,
+                    onClick = "onSelectProvinceCoruna",
+                }),
+                ui.button({
+                    text = tr("ui.province_lugo", "Lugo"),
+                    variant = (selectedProvince == 27) and "primary" or "ghost",
+                    controlSize = s.btnSize,
+                    onClick = "onSelectProvinceLugo",
+                }),
+                ui.button({
+                    text = tr("ui.province_ourense", "Ourense"),
+                    variant = (selectedProvince == 32) and "primary" or "ghost",
+                    controlSize = s.btnSize,
+                    onClick = "onSelectProvinceOurense",
+                }),
+                ui.button({
+                    text = tr("ui.province_pontevedra", "Pontevedra"),
+                    variant = (selectedProvince == 36) and "primary" or "ghost",
+                    controlSize = s.btnSize,
+                    onClick = "onSelectProvincePontevedra",
+                }),
+            }),
+            ui.button({
+                glyph = "x",
+                variant = "ghost",
+                tooltip = tr("ui.search_concello_close", "Pechar busca (Esc)"),
+                controlSize = s.btnSize,
+                onClick = "onToggleSearchConcello",
+            }),
+        })
+
+        local numCols = (s.chartWidth >= 1100) and 4 or 3
+        local gridRows = {}
+        local currentRow = {}
+
+        for idx, c in ipairs(matches) do
+            local isCurrent = (c.id == curConcelloId)
+            local card = ui.row({
+                gap = 8,
+                align = "center",
+                justify = "space-between",
+                paddingH = 10,
+                paddingV = 6,
+                radius = 8,
+                fill = isCurrent and cardBgActive or cardBgNorm,
+                border = isCurrent and "primary" or "outline/0.25",
+                borderWidth = 1,
+                flexGrow = 1,
+                tooltip = string.format("%s (%s • %d)", c.name, c.province, c.id),
+                onClick = function()
+                    onSelectConcello(c.id, c.name)
+                end,
+            }, {
+                ui.column({ gap = 1, align = "start", flexGrow = 1 }, {
+                    ui.label({
+                        text = c.name,
+                        fontSize = math.max(12, math.floor(s.hourlyTemp * 0.95)),
+                        fontWeight = isCurrent and "bold" or "normal",
+                        color = isCurrent and "primary" or "on_surface",
+                    }),
+                    ui.label({
+                        text = string.format("%s • %d", c.province, c.id),
+                        fontSize = math.max(9, math.floor(s.hourlyTime * 0.85)),
+                        color = "on_surface_variant",
+                    }),
+                }),
+                isCurrent and ui.glyph({ name = "check", size = 16, color = "primary" }) or nil,
+            })
+
+            table.insert(currentRow, card)
+
+            if #currentRow == numCols or idx == #matches then
+                if #currentRow < numCols then
+                    for _ = #currentRow + 1, numCols do
+                        table.insert(currentRow, ui.spacer({ flexGrow = 1 }))
+                    end
+                end
+                table.insert(gridRows, ui.row({ gap = 6, align = "center" }, currentRow))
+                currentRow = {}
+            end
+        end
+
+        local listContent
+        if #matches == 0 then
+            listContent = ui.row({ align = "center", justify = "center", padding = 16 }, {
+                ui.label({
+                    text = tr("ui.no_concellos_found", "Non se atoparon concellos"),
+                    fontSize = s.hourlyTemp,
+                    color = "on_surface_variant",
+                }),
+            })
+        else
+            listContent = ui.column({ gap = 6 }, gridRows)
+        end
+
+        local scrollContainer = ui.scroll({
+            maxHeight = 220,
+            flexGrow = 1,
+        }, {
+            listContent,
+        })
+
+        local pickerBox = ui.column({
+            gap = 10,
+            padding = 12,
+            radius = 14,
+            fill = cardBgNorm,
+            border = "primary/0.4",
+            borderWidth = 1,
+        }, {
+            searchInputRow,
+            ui.separator(),
+            scrollContainer,
+        })
+
+        rootChildren[#rootChildren + 1] = pickerBox
+    end
 
     -- Variables comúns para a predición horaria e diaria
     local currentHourSec = math.floor(os.time() / 3600) * 3600
