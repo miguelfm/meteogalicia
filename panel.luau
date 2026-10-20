@@ -743,9 +743,10 @@ render = function()
         local curConcelloId = (weather and weather.concelloId) or tonumber(noctalia.state.get("concello_id")) or 15035
 
         -- Fila 1: Caixa de busca principal de largo completo
-        local searchInputRow = ui.row({ gap = 12, align = "center", flexGrow = 1 }, {
+        local searchInputRow = ui.row({ gap = 12, align = "center" }, {
             ui.glyph({ name = "search", size = 22, color = "primary" }),
             ui.input({
+                key = "concello-search-input",
                 value = concelloSearchQuery,
                 placeholder = tr("ui.search_concello_placeholder", "Buscar concello ou código INE…"),
                 onChange = "onConcelloSearchChange",
@@ -753,6 +754,7 @@ render = function()
                 controlSize = s.btnSize,
                 fontSize = math.max(14, math.floor(s.hourlyTemp * 0.95)),
                 flexGrow = 1,
+                focus = true,
             }),
             ui.button({
                 glyph = "x",
@@ -825,7 +827,6 @@ render = function()
             local card = ui.row({
                 gap = 10,
                 align = "center",
-                justify = "space-between",
                 paddingH = math.max(14, math.floor(s.panelPadding * 0.6)),
                 paddingV = math.max(10, math.floor(s.panelPadding * 0.45)),
                 radius = 10,
@@ -860,7 +861,7 @@ render = function()
             if #currentRow == numCols or idx == #matches then
                 if #currentRow < numCols then
                     for _ = #currentRow + 1, numCols do
-                        table.insert(currentRow, ui.spacer({ minWidth = cardMinWidth, flexGrow = 1 }))
+                        table.insert(currentRow, ui.box({ width = cardMinWidth, height = 1, fill = "#00000000" }))
                     end
                 end
                 table.insert(gridRows, ui.row({ gap = 8, align = "center" }, currentRow))
@@ -868,25 +869,23 @@ render = function()
             end
         end
 
-        local listContent
+        local scrollItems = gridRows
         if #matches == 0 then
-            listContent = ui.row({ align = "center", justify = "center", padding = 24 }, {
-                ui.label({
-                    text = tr("ui.no_concellos_found", "Non se atoparon concellos"),
-                    fontSize = s.hourlyTemp,
-                    color = "on_surface_variant",
+            scrollItems = {
+                ui.row({ align = "center", justify = "center", padding = 24 }, {
+                    ui.label({
+                        text = tr("ui.no_concellos_found", "Non se atoparon concellos"),
+                        fontSize = s.hourlyTemp,
+                        color = "on_surface_variant",
+                    }),
                 }),
-            })
-        else
-            listContent = ui.column({ gap = 8 }, gridRows)
+            }
         end
 
         local scrollContainer = ui.scroll({
-            maxHeight = 300,
-            flexGrow = 1,
-        }, {
-            listContent,
-        })
+            height = 280,
+            gap = 8,
+        }, scrollItems)
 
         local pickerBox = ui.column({
             gap = 12,
