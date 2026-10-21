@@ -6,6 +6,7 @@
 local shared = require("./shared.luau")
 local stations = require("./stations.luau")
 local concellos = require("./concellos.luau")
+local forecast = require("./forecast.luau")
 
 local concellosMap: { [number]: concellos.Concello } = {}
 for _, c in ipairs(concellos) do
@@ -54,20 +55,20 @@ local function poll()
             return
         end
 
-        local dailyData = noctalia.json.decode(dailyRes.body or "{}")
-        if not dailyData or type(dailyData) ~= "table" then
+        local dailyData, dailyError = forecast.decode(dailyRes.body, "forecastDataShortTerm", noctalia.json.decode)
+        if not dailyData then
             inFlight = false
             noctalia.state.set("weather_loading", false)
-            noctalia.state.set("weather_error", "Formato de predición diaria non válido")
+            noctalia.state.set("weather_error", dailyError == "empty" and "Sen predición diaria dispoñible" or "Formato de predición diaria non válido")
             return
         end
 
         -- 2. Obter predición por horas para hoxe, mañá, pasado mañá e seguinte (48+ horas continuas)
         local nowSec = os.time()
-        local todayParam = os.date("!%Y-%m-%dT00%%3A00%%3A00.000Z", nowSec)
-        local tomorrowParam = os.date("!%Y-%m-%dT00%%3A00%%3A00.000Z", nowSec + 86400)
-        local dayAfterParam = os.date("!%Y-%m-%dT00%%3A00%%3A00.000Z", nowSec + 172800)
-        local day3Param = os.date("!%Y-%m-%dT00%%3A00%%3A00.000Z", nowSec + 259200)
+        local todayParam = forecast.hourlyDate(nowSec, 0)
+        local tomorrowParam = forecast.hourlyDate(nowSec, 1)
+        local dayAfterParam = forecast.hourlyDate(nowSec, 2)
+        local day3Param = forecast.hourlyDate(nowSec, 3)
 
         local hourlyTodayUrl = shared.BASE_API .. "concellos/predicion-horaria?idConcello=" .. tostring(concelloId) .. "&data=" .. todayParam .. "&idioma=gl"
         local hourlyTomorrowUrl = shared.BASE_API .. "concellos/predicion-horaria?idConcello=" .. tostring(concelloId) .. "&data=" .. tomorrowParam .. "&idioma=gl"
@@ -87,11 +88,11 @@ local function poll()
                 return
             end
 
-            local hourlyDataToday = noctalia.json.decode(hourlyRes.body or "{}")
-            if not hourlyDataToday or type(hourlyDataToday) ~= "table" then
+            local hourlyDataToday, hourlyError = forecast.decode(hourlyRes.body, "forecastDataTime", noctalia.json.decode)
+            if not hourlyDataToday then
                 inFlight = false
                 noctalia.state.set("weather_loading", false)
-                noctalia.state.set("weather_error", "Formato de predición horaria non válido")
+                noctalia.state.set("weather_error", hourlyError == "empty" and "Sen predición horaria dispoñible para " .. forecast.localDate(nowSec, 0) or "Formato de predición horaria non válido")
                 return
             end
 
@@ -103,7 +104,7 @@ local function poll()
             }, function(hourlyTomorrowRes)
                 local hourlyDataTomorrow = nil
                 if hourlyTomorrowRes and hourlyTomorrowRes.ok and hourlyTomorrowRes.status == 200 then
-                    hourlyDataTomorrow = noctalia.json.decode(hourlyTomorrowRes.body or "{}")
+                    hourlyDataTomorrow = forecast.decode(hourlyTomorrowRes.body, "forecastDataTime", noctalia.json.decode)
                 end
 
                 -- Obter horas de pasado mañá
@@ -114,7 +115,7 @@ local function poll()
                 }, function(hourlyDayAfterRes)
                     local hourlyDataDayAfter = nil
                     if hourlyDayAfterRes and hourlyDayAfterRes.ok and hourlyDayAfterRes.status == 200 then
-                        hourlyDataDayAfter = noctalia.json.decode(hourlyDayAfterRes.body or "{}")
+                        hourlyDataDayAfter = forecast.decode(hourlyDayAfterRes.body, "forecastDataTime", noctalia.json.decode)
                     end
 
                     -- Obter horas do cuarto día para garantir 48 horas completas a calquera hora do día
@@ -125,7 +126,7 @@ local function poll()
                     }, function(hourlyDay3Res)
                         local hourlyDataDay3 = nil
                         if hourlyDay3Res and hourlyDay3Res.ok and hourlyDay3Res.status == 200 then
-                            hourlyDataDay3 = noctalia.json.decode(hourlyDay3Res.body or "{}")
+                            hourlyDataDay3 = forecast.decode(hourlyDay3Res.body, "forecastDataTime", noctalia.json.decode)
                         end
 
                         -- Obter predición a medio prazo (para o 4º día)
@@ -136,7 +137,7 @@ local function poll()
                         }, function(mediumTermRes)
                             local mediumTermData = nil
                             if mediumTermRes and mediumTermRes.ok and mediumTermRes.status == 200 then
-                                mediumTermData = noctalia.json.decode(mediumTermRes.body or "{}")
+                                mediumTermData = forecast.decode(mediumTermRes.body, "forecastDataMediumTerm", noctalia.json.decode)
                             end
 
                 -- Procesar datos diarios
@@ -275,8 +276,8 @@ local function poll()
                 end
 
                 local currentHourSec = math.floor(nowSec / 3600) * 3600
-                local todayDateStr = os.date("%Y-%m-%d", nowSec)
-                local tomorrowDateStr = os.date("%Y-%m-%d", nowSec + 86400)
+                local todayDateStr = forecast.localDate(nowSec, 0)
+                local tomorrowDateStr = forecast.localDate(nowSec, 1)
                 local currentEntry = nil
                 local processedHours = {}
                 local hourlyCurve = {}
@@ -350,7 +351,7 @@ local function poll()
                 local history = noctalia.state.get("weather_daily_history")
                 if type(history) ~= "table" then history = {} end
                 local concelloHistory = history[tostring(concelloId)] or {}
-                local yesterdayDateStr = os.date("%Y-%m-%d", nowSec - 86400)
+                local yesterdayDateStr = forecast.localDate(nowSec, -1)
                 local yesterdayInfo = concelloHistory[yesterdayDateStr]
 
                 if not yesterdayInfo then

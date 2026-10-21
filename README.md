@@ -99,6 +99,15 @@ noctalia msg config-reload
 
 E engade o widget `miguelfm/meteogalicia:bar` á túa barra no ficheiro `settings.toml` ou mediante o editor visual de Noctalia.
 
+Se o plugin xa está instalado mediante esta ligazón, os cambios no repositorio
+aplícanse á instalación local. Tras actualizalo, podes recargar a configuración
+e solicitar unha consulta inmediata:
+
+```bash
+noctalia msg config-reload
+noctalia msg plugin miguelfm/meteogalicia:poller all refresh
+```
+
 ---
 
 ## Configuración (`plugin.toml`)
@@ -132,9 +141,11 @@ meteogalicia/
 ├── concellos.luau         # Catálogo oficial dos 313 concellos de Galicia con coordenadas e códigos INE
 ├── stations.luau          # Catálogo oficial de estacións meteorolóxicas e coordenadas para humidade en tempo real
 ├── shared.luau            # Mapeo de códigos MeteoGalicia, xerador de gráfico SVG e utilidades
+├── forecast.luau          # Datas locais e validación protexida das respostas de predición
 ├── scripts/
 │   └── set_concello.py    # Script auxiliar para persistir a selección de concello en settings.toml
 ├── translations/          # Internacionalización (gl.json en galego, en.json en inglés)
+├── tests/forecast_test.luau # Probas de regresión de datas e respostas da API
 └── LICENSE                # Licenza MIT
 ```
 
@@ -143,10 +154,46 @@ meteogalicia/
 ## API de MeteoGalicia
 
 Este proxecto emprega os servizos e APIs públicas oficiais de **MeteoGalicia** (Consellería de Medio Ambiente e Cambio Climático - Xunta de Galicia):
-* **Servizo Numérico**: `getNumericForecastInfo` (predición horaria e datos modelizados por concellos).
-* **Servizo Sinóptico**: `getDailyForecastInfo` (predición diaria xeral, avisos e comentarios oficiais dos meteorólogos).
+* **Base REST**: `https://apis-ext.xunta.gal/meteo2api/v1/api/`.
+* **Predición horaria**: `concellos/predicion-horaria?idConcello=…&data=AAAA-MM-DDT00%3A00%3A00.000Z&idioma=gl` (lista `forecastDataTime`).
+* **Predición diaria**: `concellos/predicion/diaria?idConcello=…&idioma=gl` (lista `forecastDataShortTerm`, avisos e comentario oficial).
+* **Medio prazo**: `concellos/predicion-medio-prazo?idConcello=…&idioma=gl` (lista `forecastDataMediumTerm`).
 * **Rede de Observación en Tempo Real**: `ultimos10minEstacionsMeteo` (datos de estacións meteorolóxicas cada 10 minutos para humidade relativa real).
 * **Información Xeral**: [MeteoGalicia](https://www.meteogalicia.gal/).
+
+### Corrección 1.0.1: predición horaria despois da medianoite
+
+O erro «Formato de predición horaria non válido» producíase porque o servizo
+construía a data de hoxe en UTC. Entre as 00:00 e as 02:00 en horario de verán
+(ata a 01:00 en inverno), esa data corresponde aínda a onte en Galicia. A API
+pode responder a esa consulta caducada con **HTTP 200 e corpo baleiro**.
+
+Reproducido o 22/10/2026 ás 00:10 locais para Fene (`15035`): a consulta do
+21/10 devolvía 200 sen corpo; a do 22/10 devolvía un obxecto JSON con
+`forecastDataTime`. O sufixo `T00:00:00.000Z` mantense no parámetro que acepta
+a API, pero a súa parte de data constrúese co calendario local do sistema
+(en Galicia, `Europe/Madrid`).
+
+As datas de hoxe e dos tres días seguintes, así como as referencias a mañá e
+onte, calcúlanse dende o mediodía para evitar saltos nos cambios de horario.
+A lectura JSON está protexida con `pcall` e valida a lista esperada: unha resposta
+baleira indica «Sen predición … dispoñible», mentres que un JSON incorrecto
+indica formato non válido. Os erros liberan a consulta en curso para permitir
+reintentos e conservan os últimos datos. Se fallan días futuros ou o medio prazo,
+séguense amosando os datos válidos dispoñibles.
+
+### Verificación
+
+Co intérprete [Luau](https://luau.org/getting-started/) dispoñible:
+
+```bash
+TZ=Europe/Madrid luau tests/forecast_test.luau
+noctalia plugins lint .
+```
+
+As probas cobren medianoite local fronte a UTC, os cambios de horario de marzo
+e outubro, cambios de mes e ano, ano bisesto, corpos baleiros e respostas JSON
+malformadas ou cunha estrutura inesperada.
 
 ---
 
