@@ -4,6 +4,7 @@
 -- upcoming days forecast with continuous SVG temperature & rain chart, official commentary, and indicators.
 
 local shared = require("./shared.luau")
+local i18n = require("./i18n.luau")
 local concellos = require("./concellos.luau")
 
 local weather = nil
@@ -408,15 +409,7 @@ function onKey(chord: string?, pressed: boolean)
     end
 end
 
-local function tr(key: string, fallback: string): string
-    if type(noctalia.tr) == "function" then
-        local val = noctalia.tr(key)
-        if val and val ~= "" and val ~= key then
-            return val
-        end
-    end
-    return fallback
-end
+local tr = i18n.tr
 
 local function getScale(): ScaleConfig
     local key = tostring(noctalia.getConfig("ui_scale") or "large"):lower()
@@ -499,14 +492,12 @@ local function getWindColor(windSpeed: number, isDark: boolean): string
     end
 end
 
-local function formatWindTooltip(windDesc: string?, windSpeed: number?, isEn: boolean): string
+local function formatWindTooltip(windDesc: string?, windSpeed: number?): string
     local speed = tonumber(windSpeed) or 0
-    local desc = windDesc or ""
-    local arrow = getWindArrow(desc, speed)
-    local windWord = isEn and "Wind" or "Vento"
-    if isEn and desc:lower():find("calm") then
-        desc = "Calm"
-    end
+    local original = windDesc or ""
+    local desc = i18n.wind(original)
+    local arrow = getWindArrow(original, speed)
+    local windWord = tr("ui.wind_title")
     if desc ~= "" then
         if speed > 0 then
             return string.format("%s: %s %s (%d km/h)", windWord, arrow, desc, speed)
@@ -519,6 +510,7 @@ local function formatWindTooltip(windDesc: string?, windSpeed: number?, isEn: bo
 end
 
 render = function()
+    i18n.refresh()
     local s = getScale()
     local rootFill, cardBgNorm, cardBgActive, commentaryBg = getThemeFills()
 
@@ -536,7 +528,7 @@ render = function()
             }, {
                 ui.glyph({ name = "cloud-off", size = s.headerGlyph, color = "error" }),
                 ui.label({ text = tr("ui.error_load", "Non se puideron cargar os datos de MeteoGalicia"), fontSize = s.headerDesc, fontWeight = "bold", color = "error" }),
-                ui.label({ text = tostring(weatherError), fontSize = s.hourlyTemp, color = "on_surface_variant" }),
+                ui.label({ text = i18n.error(weatherError), fontSize = s.hourlyTemp, color = "on_surface_variant" }),
                 ui.button({ text = tr("ui.retry", "Reintentar"), glyph = "refresh", variant = "primary", controlSize = s.btnSize, onClick = "onRefresh" }),
             }))
         else
@@ -566,7 +558,7 @@ render = function()
     if noctalia.isDarkMode ~= nil then
         isDark = (noctalia.isDarkMode() == true)
     end
-    local isEn = (tr("ui.today", "Hoxe") == "Today")
+    local isEn = i18n.locale() == "en"
 
     local rootChildren = {}
 
@@ -622,7 +614,7 @@ render = function()
     local curWindColor = getWindColor(curWindSpeed, isDark)
     local curWindLabel = tr("ui.wind_title", "Vento")
     local curWindVal = curWindArrow .. " " .. tostring(curWindSpeed) .. " km/h"
-    local curWindTip = formatWindTooltip(curWindDesc, curWindSpeed, isEn)
+    local curWindTip = formatWindTooltip(curWindDesc, curWindSpeed)
     local cardWind = makeHeaderCard("wind", curWindColor, curWindLabel, curWindVal, curWindTip)
 
     -- Humidade actual (en tempo real desde a estación máis próxima)
@@ -633,25 +625,25 @@ render = function()
 
     -- Calidade do aire actual (ICA)
     local icaVal = tonumber(cur.ica or today.ica) or 0
-    local icaDesc = isEn and "Good" or "Boa"
+    local icaDesc = tr("ui.aqi.good")
     local icaColor = isDark and "#34d399" or "#059669"
-    local icaFull = isEn and "Good (ICA 1)" or "Favorable (ICA 1)"
+    local icaFull = i18n.format("ui.aqi.full", tr("ui.aqi.good"), 1)
     if icaVal >= 4 then
-        icaDesc = isEn and "V.Poor" or "Moi mala"
+        icaDesc = tr("ui.aqi.very_poor")
         icaColor = isDark and "#f87171" or "#dc2626"
-        icaFull = isEn and "Very poor (ICA 4)" or "Moi mala (ICA 4)"
+        icaFull = i18n.format("ui.aqi.full", tr("ui.aqi.very_poor"), 4)
     elseif icaVal >= 3 then
-        icaDesc = isEn and "Poor" or "Mala"
+        icaDesc = tr("ui.aqi.poor")
         icaColor = isDark and "#fb923c" or "#ea580c"
-        icaFull = isEn and "Poor (ICA 3)" or "Mala (ICA 3)"
+        icaFull = i18n.format("ui.aqi.full", tr("ui.aqi.poor"), 3)
     elseif icaVal >= 2 then
-        icaDesc = isEn and "Fair" or "Razoable"
+        icaDesc = tr("ui.aqi.fair")
         icaColor = isDark and "#fbbf24" or "#d97706"
-        icaFull = isEn and "Fair (ICA 2)" or "Razoable (ICA 2)"
+        icaFull = i18n.format("ui.aqi.full", tr("ui.aqi.fair"), 2)
     elseif icaVal == 0 then
         icaDesc = "--"
         icaColor = "on_surface_variant"
-        icaFull = isEn and "Not available" or "Non dispoñible"
+        icaFull = tr("ui.not_available")
     end
     local icaTip = tr("ui.air_quality_tooltip", "Calidade do aire: ") .. icaFull
     local cardAirQuality = makeHeaderCard("leaf", icaColor, tr("ui.air_quality_title", "Calidade aire"), icaDesc, icaTip)
@@ -687,7 +679,7 @@ render = function()
                 }),
             }),
             ui.label({
-                text = cur.skyDesc or "Predición diaria",
+                text = i18n.sky(cur.skyCode or cur.skyId, cur.skyDesc),
                 fontSize = s.headerDesc,
                 color = "on_surface_variant",
             }),
@@ -835,7 +827,7 @@ render = function()
                 border = isCurrent and "primary" or "outline/0.25",
                 borderWidth = 1,
                 flexGrow = 1,
-                tooltip = string.format("%s (%s • Código INE %d)", c.name, c.province, c.id),
+                tooltip = string.format(tr("ui.municipality_tooltip"), c.name, c.province, c.id),
                 onClick = function()
                     onSelectConcello(c.id, c.name)
                 end,
@@ -906,9 +898,9 @@ render = function()
 
     -- Variables comúns para a predición horaria e diaria
     local currentHourSec = math.floor(os.time() / 3600) * 3600
-    local weekdaysShort = isEn and shared.WEEKDAYS_SHORT_EN or shared.WEEKDAYS_SHORT_GL
-    local weekdaysFull = isEn and shared.WEEKDAYS_EN or shared.WEEKDAYS_GL
-    local monthsTable = isEn and shared.MONTHS_FULL_EN or shared.MONTHS_FULL_GL
+    local weekdaysShort = i18n.weekdays(true)
+    local weekdaysFull = i18n.weekdays(false)
+    local monthsTable = i18n.months(false)
     local totalHourly = math.min(hoursLimit, #hourly)
     local maxOffset = math.max(0, totalHourly - 12)
 
@@ -1077,10 +1069,10 @@ render = function()
         end
 
         local dayName = weekdaysFull[h.weekday] or ""
-        local atWord = isEn and "at" or "ás"
-        local rainWord = isEn and "Rain" or "Choiva"
-        local skyPart = (h.skyDesc and h.skyDesc ~= "") and (" · " .. h.skyDesc) or ""
-        local windLine = formatWindTooltip(h.windDesc, h.windSpeed, isEn)
+        local atWord = tr("ui.at")
+        local rainWord = tr("ui.rain_probability")
+        local skyPart = " · " .. i18n.sky(h.skyCode or h.skyId, h.skyDesc)
+        local windLine = formatWindTooltip(h.windDesc, h.windSpeed)
         local cardTooltip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%\n%s",
             dayName, h.day or 0, atWord, h.time or "--:--",
             tonumber(h.temp) or 0, skyPart,
@@ -1160,7 +1152,7 @@ render = function()
 
         rootChildren[#rootChildren + 1] = ui.row({ gap = 6, align = "center" }, {
             ui.glyph({ name = "calendar", size = s.sectionIcon, color = "primary" }),
-            ui.label({ text = tr("ui.daily_title", isEn and "Forecast" or "Resumo dos vindeiros días"), fontSize = s.sectionTitle, fontWeight = "bold", color = "on_surface" }),
+            ui.label({ text = tr("ui.daily_title"), fontSize = s.sectionTitle, fontWeight = "bold", color = "on_surface" }),
         })
 
         local isDark = true
@@ -1184,7 +1176,6 @@ render = function()
         local grayGreen = isDark and "#8f9690" or "#58605a"
 
         local chartSvg = shared.generateDailyChartSvg(dailyDays, s.chartWidth, s.chartHeight, {
-            isEn = isEn,
             isXlarge = (s == SCALES["xlarge"]),
             todayLabel = tr("ui.today", "Hoxe"),
             tomorrowLabel = tr("ui.tomorrow", "Mañá"),
@@ -1262,8 +1253,8 @@ render = function()
             end
 
             local timelineSlots = {}
-            local atWord = isEn and "at" or "ás"
-            local rainWord = isEn and "Rain" or "Choiva"
+            local atWord = tr("ui.at")
+            local rainWord = tr("ui.rain_probability")
 
             for slotIdx = 0, totalSlots - 1 do
                 local slotTs = day0StartTs + slotIdx * 3600
@@ -1276,7 +1267,7 @@ render = function()
 
                 local tempVal = h and tonumber(h.temp) or (dRef and tonumber(dRef.tempMin) or 0)
                 local rainProbVal = h and tonumber(h.rainProb) or (dRef and tonumber(dRef.rainProb) or 0)
-                local skyDesc = h and h.skyDesc or (dRef and dRef.skyDesc or "")
+                local skyDesc = i18n.sky(h and (h.skyCode or h.skyId) or (dRef and dRef.skyId), h and h.skyDesc or (dRef and dRef.skyDesc))
                 local skyPart = (skyDesc ~= "") and (" · " .. skyDesc) or ""
 
                 local wday = h and h.weekday or (dRef and dRef.weekday or 0)
@@ -1289,7 +1280,7 @@ render = function()
 
                 local windVal = h and tonumber(h.windSpeed) or 0
                 local windDesc = h and h.windDesc or (dRef and dRef.windDesc or "")
-                local windLine = formatWindTooltip(windDesc, windVal, isEn)
+                local windLine = formatWindTooltip(windDesc, windVal)
 
                 -- Tooltip estruturado en 4 liñas (Data, Temp/Ceo, Choiva, Vento)
                 local tTip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%\n%s",
@@ -1420,7 +1411,7 @@ render = function()
 
                 local tempVal = h and tonumber(h.temp) or (dRef and tonumber(dRef.tempMin) or 0)
                 local rainProbVal = h and tonumber(h.rainProb) or (dRef and tonumber(dRef.rainProb) or 0)
-                local skyDesc = h and h.skyDesc or (dRef and dRef.skyDesc or "")
+                local skyDesc = i18n.sky(h and (h.skyCode or h.skyId) or (dRef and dRef.skyId), h and h.skyDesc or (dRef and dRef.skyDesc))
                 local skyPart = (skyDesc ~= "") and (" · " .. skyDesc) or ""
                 local wday = h and h.weekday or (dRef and dRef.weekday or 0)
                 local dayNum = h and h.day or (dRef and dRef.day or 0)
@@ -1430,7 +1421,7 @@ render = function()
                 local windVal = h and tonumber(h.windSpeed) or 0
                 local windDesc = h and h.windDesc or (dRef and dRef.windDesc or "")
                 local windArrow = getWindArrow(windDesc, windVal)
-                local windLine = formatWindTooltip(windDesc, windVal, isEn)
+                local windLine = formatWindTooltip(windDesc, windVal)
 
                 local tTip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%\n%s",
                     dayName, dayNum, atWord, hTime,
@@ -1637,7 +1628,7 @@ render = function()
 
                     local nowTemp = (cur and cur.temp) or (nowH and nowH.temp) or 0
                     local nowRain = (nowH and nowH.rainProb) or (weather.rainProb or 0)
-                    local nowSky = (cur and cur.skyDesc) or (nowH and nowH.skyDesc) or ""
+                    local nowSky = i18n.sky(cur and (cur.skyCode or cur.skyId) or (nowH and nowH.skyCode), (cur and cur.skyDesc) or (nowH and nowH.skyDesc))
                     local nowSkyPart = (nowSky ~= "") and (" · " .. nowSky) or ""
                     local nowWday = nowH and nowH.weekday or tonumber(os.date("%w", currentHourSec)) or 0
                     local nowDayNum = nowH and nowH.day or tonumber(os.date("%d", currentHourSec)) or 0
@@ -1647,7 +1638,7 @@ render = function()
                     local nowWindVal = (cur and tonumber(cur.windSpeed)) or (nowH and tonumber(nowH.windSpeed)) or 0
                     local nowWindDesc = (cur and cur.windDesc) or (nowH and nowH.windDesc) or ""
                     local nowWindArrow = getWindArrow(nowWindDesc, nowWindVal)
-                    local nowWindLine = formatWindTooltip(nowWindDesc, nowWindVal, isEn)
+                    local nowWindLine = formatWindTooltip(nowWindDesc, nowWindVal)
 
                     local nowTooltip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%\n%s",
                         nowDayName, nowDayNum, atWord, nowTime,
@@ -1660,7 +1651,7 @@ render = function()
 
                     labelsList[#labelsList + 1] = {
                         x = padLeft + nowIdx * hourW,
-                        text = isEn and "Now" or "Agora",
+                        text = tr("ui.now"),
                         fontSize = 9.5,
                         fontWeight = "bold",
                         color = isDark and "#38bdf8" or "#0284c7",
@@ -1763,7 +1754,7 @@ render = function()
                 ui.row({ gap = 5, align = "center" }, {
                     ui.box({ width = 6, height = 6, radius = 3, fill = isDark and "#38bdf8" or "#0284c7" }),
                     ui.label({
-                        text = tr("ui.rain_probability", isEn and "Rain" or "Choiva"),
+                        text = tr("ui.rain_probability"),
                         fontSize = s.sectionSub,
                         fontWeight = "bold",
                         color = "on_surface",
@@ -1781,7 +1772,7 @@ render = function()
                         color = isDark and "#94a3b8" or "#475569",
                     }),
                     ui.label({
-                        text = isEn and "Wind (km/h)" or "Vento (km/h)",
+                        text = tr("ui.wind_units"),
                         fontSize = s.sectionSub,
                         fontWeight = "bold",
                         color = "on_surface_variant",
@@ -1869,31 +1860,31 @@ render = function()
                 local nightDurHours = math.floor(nightDurationH)
                 local nightDurMins = math.floor((nightDurationH - nightDurHours) * 60 + 0.5)
 
-                local icaShort = isEn and "Good" or "Boa"
-                local icaFull = isEn and "Good (ICA 1)" or "Favorable (ICA 1)"
+                local icaShort = tr("ui.aqi.good")
+                local icaFull = i18n.format("ui.aqi.full", tr("ui.aqi.good"), 1)
                 if d.ica and d.ica >= 4 then
-                    icaShort = isEn and "V.Poor" or "M.Mala"
-                    icaFull = isEn and "Very poor (ICA 4)" or "Moi mala (ICA 4)"
+                    icaShort = tr("ui.aqi.very_poor")
+                    icaFull = i18n.format("ui.aqi.full", tr("ui.aqi.very_poor"), 4)
                 elseif d.ica and d.ica >= 3 then
-                    icaShort = isEn and "Poor" or "Mala"
-                    icaFull = isEn and "Poor (ICA 3)" or "Mala (ICA 3)"
+                    icaShort = tr("ui.aqi.poor")
+                    icaFull = i18n.format("ui.aqi.full", tr("ui.aqi.poor"), 3)
                 elseif d.ica and d.ica >= 2 then
-                    icaShort = isEn and "Fair" or "Razoable"
-                    icaFull = isEn and "Fair (ICA 2)" or "Razoable (ICA 2)"
+                    icaShort = tr("ui.aqi.fair")
+                    icaFull = i18n.format("ui.aqi.full", tr("ui.aqi.fair"), 2)
                 end
 
                 local uvRiskStr = ""
                 if d.uv and d.uv > 0 then
                     if d.uv >= 11 then
-                        uvRiskStr = isEn and " (Extreme)" or " (Extremo)"
+                        uvRiskStr = " (" .. tr("ui.uv.extreme") .. ")"
                     elseif d.uv >= 8 then
-                        uvRiskStr = isEn and " (Very high)" or " (Moi alto)"
+                        uvRiskStr = " (" .. tr("ui.uv.very_high") .. ")"
                     elseif d.uv >= 6 then
-                        uvRiskStr = isEn and " (High)" or " (Alto)"
+                        uvRiskStr = " (" .. tr("ui.uv.high") .. ")"
                     elseif d.uv >= 3 then
-                        uvRiskStr = isEn and " (Moderate)" or " (Moderado)"
+                        uvRiskStr = " (" .. tr("ui.uv.moderate") .. ")"
                     else
-                        uvRiskStr = isEn and " (Low)" or " (Baixo)"
+                        uvRiskStr = " (" .. tr("ui.uv.low") .. ")"
                     end
                 end
 
@@ -1904,14 +1895,14 @@ render = function()
 
                 local dayTooltip = string.format("%s\n☀️ %s: %s → %s (%dh %02dm)\n🔆 %s: %s\n🍃 %s: %s",
                     headerStr,
-                    isEn and "Daylight" or "Horas de sol", sRiseStr, sSetStr, dayDurHours, dayDurMins,
-                    isEn and "Max UV Index" or "Radiación UV máx", (d.uv and d.uv > 0) and (tostring(d.uv) .. uvRiskStr) or (isEn and "Not available" or "Non dispoñible"),
-                    isEn and "Air Quality" or "Calidade do aire", (d.ica and d.ica > 0) and icaFull or (isEn and "Not available" or "Non dispoñible"))
+                    tr("ui.daylight"), sRiseStr, sSetStr, dayDurHours, dayDurMins,
+                    tr("ui.uv_max"), (d.uv and d.uv > 0) and (tostring(d.uv) .. uvRiskStr) or (tr("ui.not_available")),
+                    tr("ui.air_quality_title"), (d.ica and d.ica > 0) and icaFull or (tr("ui.not_available")))
 
                 local nightTooltip = string.format("%s\n🌙 %s: %s → %s (%dh %02dm)\n🍃 %s: %s",
                     headerStr,
-                    isEn and "Night hours" or "Horas de noite", sSetStr, sRiseStr, nightDurHours, nightDurMins,
-                    isEn and "Air Quality" or "Calidade do aire", (d.ica and d.ica > 0) and icaFull or (isEn and "Not available" or "Non dispoñible"))
+                    tr("ui.night_hours"), sSetStr, sRiseStr, nightDurHours, nightDurMins,
+                    tr("ui.air_quality_title"), (d.ica and d.ica > 0) and icaFull or (tr("ui.not_available")))
 
                 local dayClickHandler = function()
                     local targetOffset = math.max(0, math.min((i - 1) * 12, maxOffset))
@@ -2060,7 +2051,7 @@ render = function()
     if today.uv and today.uv > 0 then
         indicators[#indicators + 1] = ui.row({ gap = 4, align = "center" }, {
             ui.glyph({ name = "sun-high", size = s.footerIcon, color = "tertiary" }),
-            ui.label({ text = (isEn and "Max UV index: " or "Índice UV máx: ") .. tostring(today.uv), fontSize = s.footerText, color = "on_surface_variant" }),
+            ui.label({ text = (tr("ui.uv_max") .. ": ") .. tostring(today.uv), fontSize = s.footerText, color = "on_surface_variant" }),
         })
     end
 
@@ -2068,7 +2059,7 @@ render = function()
     if cur.stationName and cur.stationName ~= "" then
         indicators[#indicators + 1] = ui.row({ gap = 4, align = "center" }, {
             ui.glyph({ name = "map-pin", size = s.footerIcon, color = "secondary" }),
-            ui.label({ text = (isEn and "Station: " or "Estación: ") .. cur.stationName, fontSize = s.footerText, color = "on_surface_variant" }),
+            ui.label({ text = (tr("ui.station") .. ": ") .. cur.stationName, fontSize = s.footerText, color = "on_surface_variant" }),
         })
     end
 
@@ -2076,7 +2067,7 @@ render = function()
     if weather.updatedAt then
         indicators[#indicators + 1] = ui.row({ gap = 4, align = "center" }, {
             ui.glyph({ name = "clock", size = s.footerIcon, color = "on_surface_variant" }),
-            ui.label({ text = (isEn and "Updated: " or "Actualizado: ") .. tostring(weather.updatedAt), fontSize = s.footerText, color = "on_surface_variant" }),
+            ui.label({ text = (tr("ui.updated") .. ": ") .. tostring(weather.updatedAt), fontSize = s.footerText, color = "on_surface_variant" }),
         })
     end
 
@@ -2136,3 +2127,7 @@ end
 weather = noctalia.state.get("weather")
 weatherError = noctalia.state.get("weather_error")
 render()
+
+function onConfigChanged()
+    render()
+end

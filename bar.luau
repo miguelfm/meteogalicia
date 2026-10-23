@@ -3,21 +3,16 @@
 -- Shows weather glyph, temperature, rain probability (if > 0%) and municipality name.
 -- Clicking opens the detailed hourly forecast panel.
 
+local i18n = require("./i18n.luau")
+
 local weatherData = nil
 local weatherError = nil
 local isLoading = false
 
-local function tr(key: string, fallback: string): string
-    if type(noctalia.tr) == "function" then
-        local val = noctalia.tr(key)
-        if val and val ~= "" and val ~= key then
-            return val
-        end
-    end
-    return fallback
-end
+local tr = i18n.tr
 
 local function render()
+    i18n.refresh()
     local showTown = noctalia.getConfig("show_town_name") == true
     local showRain = noctalia.getConfig("show_rain_prob") ~= false
 
@@ -76,11 +71,12 @@ local function render()
             )
         end
 
-        local condStr = (cur.skyDesc and cur.skyDesc ~= "") and (cur.skyDesc .. ", " .. tempStr) or tempStr
+        local skyDesc = i18n.sky(cur.skyCode or cur.skyId, cur.skyDesc)
+        local condStr = skyDesc .. ", " .. tempStr
 
         local windStr
         if cur.windDesc and cur.windDesc ~= "" then
-            windStr = string.format("%s: %s (%d km/h)", tr("tooltip.wind", "Vento"), cur.windDesc, cur.windSpeed or 0)
+            windStr = string.format("%s: %s (%d km/h)", tr("tooltip.wind", "Vento"), i18n.wind(cur.windDesc), cur.windSpeed or 0)
         elseif cur.windSpeed and cur.windSpeed > 0 then
             windStr = string.format("%s: %d km/h", tr("tooltip.wind", "Vento"), cur.windSpeed)
         else
@@ -116,7 +112,7 @@ local function render()
             fontSize = 12,
             color = "error",
         })
-        barWidget.setTooltip("Erro de MeteoGalicia: " .. tostring(weatherError) .. "\nPreme co botón dereito para reintentar.")
+        barWidget.setTooltip(i18n.format("error.bar", i18n.error(weatherError)) .. "\n" .. tr("error.retry_hint"))
     else
         children[#children + 1] = ui.glyph({
             name = "cloud-rain",
@@ -128,7 +124,7 @@ local function render()
             fontSize = 12,
             color = "on_surface_variant",
         })
-        barWidget.setTooltip("Cargando predición de MeteoGalicia…")
+        barWidget.setTooltip(tr("ui.loading"))
     end
 
     barWidget.render(ui.row({ gap = 6, align = "center" }, children))
@@ -171,3 +167,6 @@ weatherData = noctalia.state.get("weather")
 weatherError = noctalia.state.get("weather_error")
 render()
 
+function onConfigChanged()
+    render()
+end

@@ -120,6 +120,7 @@ O plugin pódese configurar dende o centro de control de Noctalia ou editando as
 
 | Clave | Tipo | Valor por defecto | Descrición |
 | :--- | :--- | :--- | :--- |
+| `language` | `select` | `auto` | Idioma da barra e do panel: automático segundo Noctalia, galego (`gl`) ou inglés (`en`). |
 | `concello_id` | `int` | `15035` | Código INE do concello (campo numérico sen selector deslizante). Tamén seleccionable de xeito inmediato no panel emerxente con <kbd>F</kbd>. |
 | `concello_name` | `string` | `Fene` | Nome amosado na barra e na cabeceira do panel. |
 | `refresh_minutes`| `int` | `30` | Frecuencia de actualización en minutos (mínimo 5, máximo 180). |
@@ -131,6 +132,46 @@ O plugin pódese configurar dende o centro de control de Noctalia ou editando as
 | `show_daily_hourly_curve` | `bool` | `true` | Amosa a liña continua de temperaturas horarias dentro do gráfico diario. |
 | `ui_scale` | `select` | `large` | Escala xeral da interface, tipografía e iconas (`normal`, `large`, `xlarge`) optimizada para pantallas estándar e HiDPI/4K. |
 | `panel_opacity` | `select` | `opaque` | Estilo e opacidade do fondo do panel (`opaque`, `subtle`, `glass`). |
+
+---
+
+## Idiomas: galego e inglés
+
+Dispoñible dende a versión **1.1.0**. Véxanse os [cambios da versión](CHANGELOG.md).
+
+Mantéñense dous catálogos completos: `translations/gl-ES.json` e
+`translations/en.json`. O código `gl-ES` coincide co catálogo galego do shell
+Noctalia; un ficheiro chamado só `gl.json` non se carga cando o idioma activo
+do shell é `gl-ES`.
+
+A opción **Idioma do plugin** permite escoller:
+
+* **Automático (Noctalia)**: comportamento predeterminado; segue o idioma do
+  shell e emprega inglés se non hai unha tradución compatible.
+* **Galego**: panel e barra en galego, aínda que o resto de Noctalia estea
+  noutro idioma.
+* **English**: panel e barra en inglés.
+
+O selector é unha preferencia opcional sobre o mecanismo nativo de tradución;
+os textos da xanela de axustes, que debuxa Noctalia, seguen o idioma global do
+shell. Para cambiar todo Noctalia ao galego, o seu axuste global é
+`[shell] lang = "gl-ES"`.
+
+Os dous idiomas cobren botóns, buscas, axudas, calendario, erros, descricións
+codificadas do ceo e do vento, calidade do aire e risco UV. O comentario libre
+da fonte oficial consérvase na súa lingua orixinal e identifícase como galego
+na interface inglesa. Os nomes oficiais de concellos e estacións consérvanse.
+
+As probas comproban os dous catálogos e executan a barra, o panel e os gráficos
+reais con datos simulados, incluído o cambio de idioma con datos ou erros xa
+cargados:
+
+```bash
+python tests/check_i18n.py
+```
+
+Se Luau non está en `PATH`, pódese indicar con `--luau /ruta/a/luau`.
+Máis detalles de mantemento en [Internationalization](docs/internationalization.md).
 
 ---
 
@@ -146,9 +187,10 @@ meteogalicia/
 ├── stations.luau          # Catálogo oficial de estacións meteorolóxicas e coordenadas para humidade en tempo real
 ├── shared.luau            # Mapeo de códigos MeteoGalicia, xerador de gráfico SVG e utilidades
 ├── forecast.luau          # Datas locais e validación protexida das respostas de predición
+├── i18n.luau              # Selección de lingua e acceso aos catálogos de tradución
 ├── scripts/
 │   └── set_concello.py    # Script auxiliar para persistir a selección de concello en settings.toml
-├── translations/          # Internacionalización (gl.json en galego, en.json en inglés)
+├── translations/          # Internacionalización (gl-ES.json en galego, en.json en inglés)
 ├── tests/forecast_test.luau # Probas de regresión de datas e respostas da API
 └── LICENSE                # Licenza MIT
 ```

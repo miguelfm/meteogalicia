@@ -7,6 +7,7 @@ local shared = require("./shared.luau")
 local stations = require("./stations.luau")
 local concellos = require("./concellos.luau")
 local forecast = require("./forecast.luau")
+local i18n = require("./i18n.luau")
 
 local concellosMap: { [number]: concellos.Concello } = {}
 for _, c in ipairs(concellos) do
@@ -27,6 +28,7 @@ local function getConfig()
 end
 
 local function poll()
+    i18n.refresh()
     if inFlight then return end
     inFlight = true
     noctalia.state.set("weather_loading", true)
@@ -51,7 +53,7 @@ local function poll()
         if not dailyRes or not dailyRes.ok or dailyRes.status ~= 200 then
             inFlight = false
             noctalia.state.set("weather_loading", false)
-            noctalia.state.set("weather_error", "Erro ao obter predición diaria (" .. tostring(dailyRes and dailyRes.status or "rede") .. ")")
+            noctalia.state.set("weather_error", { key = "error.daily_http", status = dailyRes and dailyRes.status, network = not (dailyRes and dailyRes.status) })
             return
         end
 
@@ -59,7 +61,7 @@ local function poll()
         if not dailyData then
             inFlight = false
             noctalia.state.set("weather_loading", false)
-            noctalia.state.set("weather_error", dailyError == "empty" and "Sen predición diaria dispoñible" or "Formato de predición diaria non válido")
+            noctalia.state.set("weather_error", { key = dailyError == "empty" and "error.daily_empty" or "error.daily_invalid" })
             return
         end
 
@@ -84,7 +86,7 @@ local function poll()
             if not hourlyRes or not hourlyRes.ok or hourlyRes.status ~= 200 then
                 inFlight = false
                 noctalia.state.set("weather_loading", false)
-                noctalia.state.set("weather_error", "Erro ao obter predición horaria (" .. tostring(hourlyRes and hourlyRes.status or "rede") .. ")")
+                noctalia.state.set("weather_error", { key = "error.hourly_http", status = hourlyRes and hourlyRes.status, network = not (hourlyRes and hourlyRes.status) })
                 return
             end
 
@@ -92,7 +94,7 @@ local function poll()
             if not hourlyDataToday then
                 inFlight = false
                 noctalia.state.set("weather_loading", false)
-                noctalia.state.set("weather_error", hourlyError == "empty" and "Sen predición horaria dispoñible para " .. forecast.localDate(nowSec, 0) or "Formato de predición horaria non válido")
+                noctalia.state.set("weather_error", { key = hourlyError == "empty" and "error.hourly_empty" or "error.hourly_invalid", date = hourlyError == "empty" and forecast.localDate(nowSec, 0) or nil })
                 return
             end
 

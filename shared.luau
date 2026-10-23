@@ -2,6 +2,7 @@
 -- Shared utilities, constants and MeteoGalicia mapping tables.
 
 local shared = {}
+local i18n = require("./i18n.luau")
 
 shared.API_KEY = "eyJ4NXQiOiJObUU1TXpSbVpXSmtNREZtT1RJeFlqWTFNRE00TmpnM1pqVmlOR0k1WkdZM09HTXpPVEJsTURNelpUQmhOalJtWVdJNE9HUmpOR1ZpTldKak1qZGpZUSIsImtpZCI6ImdhdGV3YXlfY2VydGlmaWNhdGVfYWxpYXMiLCJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjYXJib24uc3VwZXIiLCJhcHBsaWNhdGlvbiI6eyJvd25lciI6ImFkbWluIiwidGllclF1b3RhVHlwZSI6bnVsbCwidGllciI6IlVubGltaXRlZCIsIm5hbWUiOiJ3X21ldGVvMiIsImlkIjozMzAxLCJ1dWlkIjoiMmNhMDI4N2ItNWYzYy00NGMzLTg3ZGEtOWY5ODg3NWZjNjk5In0sImlzcyI6Imh0dHBzOlwvXC9wcmQtd3NvMmFwaW0tYzAxLTAwMDEueHVudGEubG9jYWw6OTQ0NFwvb2F1dGgyXC90b2tlbiIsInRpZXJJbmZvIjp7IlB1YmxpYyI6eyJ0aWVyUXVvdGFUeXBlIjoicmVxdWVzdENvdW50IiwiZ3JhcGhRTE1heENvbXBsZXhpdHkiOjAsImdyYXBoUUxNYXhEZXB0aCI6MCwic3RvcE9uUXVvdGFSZWFjaCI6dHJ1ZSwic3Bpa2VBcnJlc3RMaW1pdCI6MCwic3Bpa2VBcnJlc3RVbml0Ijoic2VjIn19LCJrZXl0eXBlIjoiUFJPRFVDVElPTiIsInBlcm1pdHRlZFJlZmVyZXIiOiIiLCJzdWJzY3JpYmVkQVBJcyI6W3sic3Vic2NyaWJlclRlbmFudERvbWFpbiI6ImNhcmJvbi5zdXBlciIsIm5hbWUiOiJNRVRFTzJfQVBJIiwiY29udGV4dCI6IlwvbWV0ZW8yYXBpXC92MSIsInB1Ymxpc2hlciI6IkFNVEVHQVwvdWUwODIwNSIsInZlcnNpb24iOiJ2MSIsInN1YnNjcmlwdGlvblRpZXIiOiJQdWJsaWMifV0sInBlcm1pdHRlZElQIjoiIiwiaWF0IjoxNjk0MDk1MzMzLCJqdGkiOiI1NzkwYmM5NC04M2Y2LTQ4YTgtODg3Yy02MmQyNDJiMTJmZDYifQ==.W9Uc6D5te5GhMcWb-ewkiuor8rpNX5S3P89LSvrewNxNffwkQ5LC47OiSIwx0NOhZ9YKSiOf0i5L2MDjA8Roezp1xkPzC1Cx6ESkuTaXtIgu0iP4mUo6pCmwywWLhDO7_fz58k6PnPAYyehQ6R8r85nEx3Wr9F9e1u-WZx2zGTFGpqvTU9jFA1d4rlcTjTK7eGuIFSbQn6goko8elKFe3GajzGy8r6NtJLMvSgxhSpftsykx-tpGyoUVVH90dTiEul927JiYvqgOsCKa4FU1tVVY3Y9t8AJByJqsOeTz64R7KIe9A8C2WB29IewjKxDkrsypFODpOQHkIbEDhZ5g8Q=="
 
@@ -72,9 +73,10 @@ local SKY_TABLE: { [number]: SkyInfo } = {
 
 function shared.getSky(code: number?): SkyInfo
     if code ~= nil and SKY_TABLE[code] ~= nil then
-        return SKY_TABLE[code]
+        local info = SKY_TABLE[code]
+        return { glyph = info.glyph, color = info.color, desc = i18n.sky(code, info.desc) }
     end
-    return { glyph = "cloud", desc = "Descoñecido", color = "on_surface_variant" }
+    return { glyph = "cloud", desc = i18n.tr("sky.unknown"), color = "on_surface_variant" }
 end
 
 function shared.getSkyFromProbabilities(skyProb: any?): (SkyInfo, number, number)
@@ -110,70 +112,6 @@ function shared.cleanHtml(text: string?): string
     clean = clean:gsub("<[^>]+>", "")
     return (clean:gsub("^%s+", ""):gsub("%s+$", ""))
 end
-
-shared.WEEKDAYS_GL = {
-    [0] = "Domingo",
-    [1] = "Luns",
-    [2] = "Martes",
-    [3] = "Mércores",
-    [4] = "Xoves",
-    [5] = "Venres",
-    [6] = "Sábado",
-}
-
-shared.WEEKDAYS_SHORT_GL = {
-    [0] = "Dom",
-    [1] = "Lun",
-    [2] = "Mar",
-    [3] = "Mér",
-    [4] = "Xov",
-    [5] = "Ven",
-    [6] = "Sáb",
-}
-
-shared.WEEKDAYS_EN = {
-    [0] = "Sunday",
-    [1] = "Monday",
-    [2] = "Tuesday",
-    [3] = "Wednesday",
-    [4] = "Thursday",
-    [5] = "Friday",
-    [6] = "Saturday",
-}
-
-shared.WEEKDAYS_SHORT_EN = {
-    [0] = "Sun",
-    [1] = "Mon",
-    [2] = "Tue",
-    [3] = "Wed",
-    [4] = "Thu",
-    [5] = "Fri",
-    [6] = "Sat",
-}
-
-shared.MONTHS_GL = {
-    [1] = "xan", [2] = "feb", [3] = "mar", [4] = "abr",
-    [5] = "mai", [6] = "xuñ", [7] = "xul", [8] = "ago",
-    [9] = "set", [10] = "out", [11] = "nov", [12] = "dec",
-}
-
-shared.MONTHS_FULL_GL = {
-    [1] = "xaneiro", [2] = "febreiro", [3] = "marzo", [4] = "abril",
-    [5] = "maio", [6] = "xuño", [7] = "xullo", [8] = "agosto",
-    [9] = "setembro", [10] = "outubro", [11] = "novembro", [12] = "decembro",
-}
-
-shared.MONTHS_EN = {
-    [1] = "Jan", [2] = "Feb", [3] = "Mar", [4] = "Apr",
-    [5] = "May", [6] = "Jun", [7] = "Jul", [8] = "Aug",
-    [9] = "Sep", [10] = "Oct", [11] = "Nov", [12] = "Dec",
-}
-
-shared.MONTHS_FULL_EN = {
-    [1] = "January", [2] = "February", [3] = "March", [4] = "April",
-    [5] = "May", [6] = "June", [7] = "July", [8] = "August",
-    [9] = "September", [10] = "October", [11] = "November", [12] = "December",
-}
 
 shared.DEFAULT_LAT = 43.475156
 shared.DEFAULT_LON = -8.167317
@@ -282,8 +220,8 @@ local WIND_TREND_TABLE: { [number]: string } = {
 }
 
 function shared.getWindTrend(windId: number?): string
-    if not windId then return "Calma" end
-    return WIND_TREND_TABLE[windId] or "Variable"
+    if not windId then return i18n.tr("ui.calm") end
+    return i18n.wind(WIND_TREND_TABLE[windId] or "Variable")
 end
 
 function shared.getWindAngle(windDesc: string?): number
@@ -388,11 +326,10 @@ end
 
 function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height: number, opts: any?): string
     opts = opts or {}
-    local isEn = opts.isEn == true
-    local weekdaysTable = isEn and shared.WEEKDAYS_EN or shared.WEEKDAYS_GL
-    local monthsTable = isEn and shared.MONTHS_EN or shared.MONTHS_GL
-    local todayLabel = opts.todayLabel or (isEn and "Today" or "Hoxe")
-    local tomorrowLabel = opts.tomorrowLabel or (isEn and "Tomorrow" or "Mañá")
+    local weekdaysTable = i18n.weekdays(false)
+    local monthsTable = i18n.months(true)
+    local todayLabel = opts.todayLabel or i18n.tr("ui.today")
+    local tomorrowLabel = opts.tomorrowLabel or i18n.tr("ui.tomorrow")
 
     local n = #dailyDays
     if n == 0 then return "" end
@@ -737,13 +674,13 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     for i, d in ipairs(dailyDays) do
         local x = xs[i]
         local isToday = (d.reach == 0)
-        local dayTitle = "Hoxe"
+        local dayTitle = i18n.tr("ui.today")
         if d.reach == 0 then
             dayTitle = todayLabel
         elseif d.reach == 1 then
             dayTitle = tomorrowLabel
         else
-            dayTitle = weekdaysTable[d.weekday] or ("Día " .. tostring(d.reach))
+            dayTitle = weekdaysTable[d.weekday] or i18n.format("ui.day_fallback", d.reach)
         end
 
         local dateSub = ""
@@ -753,7 +690,7 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         local dateSuffix = (dateSub ~= "") and (", " .. dateSub) or ""
 
         local dayColor = isToday and theme.todayTitle or theme.dayTitle
-        local skyClean = shared.cleanHtml(d.skyDesc or ""):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+        local skyClean = shared.cleanHtml(i18n.sky(d.skyId, d.skyDesc)):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
         local rain = tonumber(d.rainProb) or 0
 
         local skyFontSize = (#skyClean > 15) and (isXlarge and 12.5 or 11.5) or (isXlarge and 14.0 or 13.0)
@@ -788,9 +725,10 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         local fillW = math.max(rain > 0 and 2.5 or 0.0, (rain / 100.0) * gaugeW)
 
         -- 3ª liña: Indicación do vento integrada arriba
-        local windDesc = tostring(d.windDesc or "")
-        if windDesc == "" then windDesc = (isEn and "Calm" or "Calma") end
-        local deg = shared.getWindAngle(windDesc)
+        local originalWind = tostring(d.windDesc or "")
+        local windDesc = i18n.wind(originalWind)
+        if windDesc == "" then windDesc = i18n.tr("ui.calm") end
+        local deg = shared.getWindAngle(originalWind)
         local cleanWind = windDesc:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
         local windIconR = isXlarge and 8.0 or 7.5
         local windIconDiam = windIconR * 2

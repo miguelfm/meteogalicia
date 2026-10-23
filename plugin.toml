@@ -1,6 +1,6 @@
 id = "miguelfm/meteogalicia"
 name = "MeteoGalicia"
-version = "1.0.1"
+version = "1.1.0"
 plugin_api = 22
 author = "miguelfm"
 license = "MIT"
@@ -10,6 +10,18 @@ tags = ["bar", "panel", "weather", "galicia", "indicator"]
 dependencies = []
 
 # ── Axustes do plugin ────────────────────────────────────────────────────────
+
+[[setting]]
+key = "language"
+type = "select"
+label_key = "settings.language.label"
+description_key = "settings.language.description"
+default = "auto"
+options = [
+  { value = "auto", label_key = "settings.language.option.auto" },
+  { value = "gl", label_key = "settings.language.option.gl" },
+  { value = "en", label_key = "settings.language.option.en" },
+]
 
 [[setting]]
 key = "concello_id"
