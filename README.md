@@ -1,5 +1,9 @@
 # MeteoGalicia para Noctalia (v5)
 
+> **Proxecto persoal e non oficial**, desenvolvido e mantido por `miguelfm`.
+> Non está afiliado, patrocinado nin avalado por MeteoGalicia ou pola Xunta de Galicia.
+> Emprega as súas APIs públicas como fonte de datos meteorolóxicos.
+
 Plugin nativo para o shell de escritorio **Noctalia** (en Wayland / Hyprland) que amosa a predición meteorolóxica oficial de Galicia por concellos, conectándose directamente á API REST de **MeteoGalicia** (`meteo2api` da Xunta de Galicia).
 
 ![Noctalia Plugin](https://img.shields.io/badge/Noctalia-v5_Plugin-7c3aed?style=flat-square)

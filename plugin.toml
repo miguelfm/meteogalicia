@@ -5,7 +5,7 @@ plugin_api = 22
 author = "miguelfm"
 license = "MIT"
 icon = "cloud-rain"
-description = "Predición meteorolóxica oficial de Galicia por concellos (diaria e hora a hora) desde MeteoGalicia."
+description = "Plugin persoal e non oficial para Noctalia que amosa datos meteorolóxicos das APIs públicas de MeteoGalicia."
 tags = ["bar", "panel", "weather", "galicia", "indicator"]
 dependencies = []
 
