@@ -4,6 +4,7 @@
 -- Clicking opens the detailed hourly forecast panel.
 
 local i18n = require("./i18n.luau")
+local forecast = require("./forecast.luau")
 
 local weatherData = nil
 local weatherError = nil
@@ -86,7 +87,7 @@ local function render()
         local lines = {
             string.format("%s — MeteoGalicia", town),
             condStr,
-            string.format("%s: %d%%", tr("tooltip.rain_prob", "Choiva"), cur.rainProb or 0),
+            string.format("%s: %s", tr("tooltip.rain_prob", "Choiva"), forecast.rainText(cur.rainProb)),
             windStr,
         }
 

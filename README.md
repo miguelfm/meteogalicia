@@ -241,6 +241,26 @@ As probas cobren medianoite local fronte a UTC, os cambios de horario de marzo
 e outubro, cambios de mes e ano, ano bisesto, corpos baleiros e respostas JSON
 malformadas ou cunha estrutura inesperada.
 
+### Cobertura da predición horaria
+
+Correccións incluídas na versión **1.1.1**.
+
+O resumo diario pode incluír un día para o que a consulta horaria aínda non
+devolva datos. Os ocos da curva e do timeline quedan sen predición horaria,
+sen engadir avisos de cobertura ao panel.
+As actualizacións posteriores incorporan os datos cando a API os publica.
+Un valor de choiva ausente ou o marcador `-9999` amósase como `—`, sen
+convertelo nun 0 % nin repetir o resumo diario como se fose unha predición horaria.
+As horas sen porcentaxe de choiva conservan unha marca oca (`○`) no timeline.
+A cobertura de choiva pode ser máis curta que a de temperatura, ceo e vento.
+
+A curva, o timeline e o marcador «Agora» aliñanse polas datas e horas locais
+de cada xornada. Nos cambios de horario, a hora repetida de outubro ocupa unha
+única posición (coa lectura máis recente) e a hora inexistente de marzo queda
+sen datos. Isto evita desprazar os días seguintes. A conversión a timestamp local
+corrixe tamén que `os.time` en Luau interpreta os campos da data como UTC.
+As probas inclúen estas transicións, días sen datos e probabilidades ausentes.
+
 ---
 
 ## Licenza

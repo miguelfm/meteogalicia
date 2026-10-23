@@ -157,7 +157,7 @@ local function poll()
                     tempMax = todayShort.temperatureMax or 0,
                     skyId = todayShort.forecastSkyId or 101,
                     skyDesc = todayShort.forecastSkyDescription or "",
-                    rainProb = todayShort.probabilityRain or 0,
+                    rainProb = forecast.rainProbability(todayShort.probabilityRain),
                     windDesc = todayShort.forecastWindDescription or "",
                     uv = todayShort.uvMax or 0,
                     ica = todayShort.ica or 0,
@@ -184,7 +184,7 @@ local function poll()
                     local wday = 0
                     local dayTs = nowSec + (reach * 86400)
                     if y > 0 and m > 0 and d > 0 then
-                        local t = os.time({ year = y, month = m, day = d, hour = 12 })
+                        local t = forecast.localTimestamp({ year = y, month = m, day = d, hour = 12 })
                         wday = tonumber(os.date("%w", t)) or 0
                         dayTs = t
                         seenDateKeys[string.format("%04d-%02d-%02d", y, m, d)] = true
@@ -203,7 +203,7 @@ local function poll()
                         skyDesc = dEntry.forecastSkyDescription or sky.desc,
                         glyph = sky.glyph,
                         color = sky.color,
-                        rainProb = dEntry.probabilityRain or 0,
+                        rainProb = forecast.rainProbability(dEntry.probabilityRain),
                         windDesc = dEntry.forecastWindDescription or "",
                         warningLevel = dEntry.warningLevel or 0,
                         uv = dEntry.uvMax or 0,
@@ -288,10 +288,10 @@ local function poll()
                 -- Inicio do día de hoxe (00:00:00) para aliñar a liña no gráfico
                 local todayStartSec = 0
                 if #dailyDays > 0 and dailyDays[1].year > 0 then
-                    todayStartSec = os.time({ year = dailyDays[1].year, month = dailyDays[1].month, day = dailyDays[1].day, hour = 0, min = 0, sec = 0 })
+                    todayStartSec = forecast.localTimestamp({ year = dailyDays[1].year, month = dailyDays[1].month, day = dailyDays[1].day, hour = 0, min = 0, sec = 0 })
                 else
                     local tParts = os.date("*t", nowSec)
-                    todayStartSec = os.time({ year = tParts.year, month = tParts.month, day = tParts.day, hour = 0, min = 0, sec = 0 })
+                    todayStartSec = forecast.localTimestamp({ year = tParts.year, month = tParts.month, day = tParts.day, hour = 0, min = 0, sec = 0 })
                 end
 
                 for _, h in ipairs(combinedHours) do
@@ -316,7 +316,7 @@ local function poll()
                         dateStr = itemDateStr,
                         isTomorrow = isTomorrow,
                         temp = h.averageTemperature or 0,
-                        rainProb = h.probabilityRain or 0,
+                        rainProb = forecast.rainProbability(h.probabilityRain),
                         windSpeed = h.windSpeed or 0,
                         windDesc = h.windTrendDescription or "",
                         skyCode = h.idSkyTrend or 101,
@@ -421,7 +421,7 @@ local function poll()
                         officialName = (dailyData.townHall and dailyData.townHall.name) or concelloName,
                         current = {
                             temp = currentEntry and currentEntry.temp or todayInfo.tempMax,
-                            rainProb = currentEntry and currentEntry.rainProb or todayInfo.rainProb,
+                            rainProb = if currentEntry then currentEntry.rainProb else todayInfo.rainProb,
                             windSpeed = currentEntry and currentEntry.windSpeed or 0,
                             windDesc = currentEntry and currentEntry.windDesc or todayInfo.windDesc,
                             skyCode = currentEntry and currentEntry.skyCode or todayInfo.skyId,

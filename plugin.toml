@@ -1,6 +1,6 @@
 id = "miguelfm/meteogalicia"
 name = "MeteoGalicia"
-version = "1.1.0"
+version = "1.1.1"
 plugin_api = 22
 author = "miguelfm"
 license = "MIT"

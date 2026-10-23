@@ -5,6 +5,7 @@
 
 local shared = require("./shared.luau")
 local i18n = require("./i18n.luau")
+local forecast = require("./forecast.luau")
 local concellos = require("./concellos.luau")
 
 local weather = nil
@@ -1073,10 +1074,10 @@ render = function()
         local rainWord = tr("ui.rain_probability")
         local skyPart = " · " .. i18n.sky(h.skyCode or h.skyId, h.skyDesc)
         local windLine = formatWindTooltip(h.windDesc, h.windSpeed)
-        local cardTooltip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%\n%s",
+        local cardTooltip = string.format("%s, %d %s %s\n%d°C%s\n%s: %s\n%s",
             dayName, h.day or 0, atWord, h.time or "--:--",
             tonumber(h.temp) or 0, skyPart,
-            rainWord, tonumber(h.rainProb) or 0,
+            rainWord, forecast.rainText(h.rainProb),
             windLine)
 
         hourCards[#hourCards + 1] = ui.column({
@@ -1111,7 +1112,7 @@ render = function()
             ui.row({ gap = 1, align = "center" }, {
                 ui.glyph({ name = "droplet", size = s.hourlyRainIcon, color = "secondary" }),
                 ui.label({
-                    text = tostring(h.rainProb or 0) .. "%",
+                    text = forecast.rainText(h.rainProb),
                     fontSize = s.hourlyRainText,
                     color = "secondary",
                 }),
@@ -1212,26 +1213,8 @@ render = function()
             local leftSpacerW = padLeft - halfHourW
             local rightSpacerW = padRight + halfHourW
 
-            local day0StartTs = 0
-            if #curveHours > 0 and curveHours[1].timestamp then
-                local firstTs = tonumber(curveHours[1].timestamp) or 0
-                local firstH = tonumber(curveHours[1].hourNum) or tonumber(os.date("%H", firstTs)) or 0
-                day0StartTs = firstTs - firstH * 3600
-            elseif dailyDays[1] and dailyDays[1].year and dailyDays[1].year > 0 then
-                day0StartTs = os.time({
-                    year = dailyDays[1].year,
-                    month = dailyDays[1].month,
-                    day = dailyDays[1].day,
-                    hour = 0,
-                    min = 0,
-                    sec = 0,
-                })
-            else
-                local firstTs = tonumber(curveHours[1] and curveHours[1].timestamp) or os.time()
-                local tParts = os.date("*t", firstTs)
-                day0StartTs = os.time({ year = tParts.year, month = tParts.month, day = tParts.day, hour = 0, min = 0, sec = 0 })
-            end
-
+            local slotHours = forecast.chartHours(dailyDays, curveHours)
+            local day0StartTs = forecast.slotTimestamp(dailyDays, 0)
             -- Mapa de horas por timestamp con tolerancia de 30 minutos
             local curveByTs: { [number]: any } = {}
             for _, ch in ipairs(curveHours) do
@@ -1240,6 +1223,8 @@ render = function()
                     curveByTs[cTs] = ch
                 end
             end
+
+            local rainMissingText = tr("ui.rain_missing", "Probabilidade non dispoñible")
 
             local function findHour(targetTs: number): any
                 local exact = curveByTs[targetTs]
@@ -1257,16 +1242,16 @@ render = function()
             local rainWord = tr("ui.rain_probability")
 
             for slotIdx = 0, totalSlots - 1 do
-                local slotTs = day0StartTs + slotIdx * 3600
+                local slotTs = forecast.slotTimestamp(dailyDays, slotIdx)
                 local dayIdx = math.floor(slotIdx / 24) + 1
                 local hNum = slotIdx % 24
                 local isStartOfDay = (hNum == 0)
 
-                local h = findHour(slotTs)
+                local h = slotHours[slotIdx]
                 local dRef = dailyDays[dayIdx]
 
                 local tempVal = h and tonumber(h.temp) or (dRef and tonumber(dRef.tempMin) or 0)
-                local rainProbVal = h and tonumber(h.rainProb) or (dRef and tonumber(dRef.rainProb) or 0)
+                local rainProbVal = h and forecast.rainProbability(h.rainProb)
                 local skyDesc = i18n.sky(h and (h.skyCode or h.skyId) or (dRef and dRef.skyId), h and h.skyDesc or (dRef and dRef.skyDesc))
                 local skyPart = (skyDesc ~= "") and (" · " .. skyDesc) or ""
 
@@ -1283,11 +1268,15 @@ render = function()
                 local windLine = formatWindTooltip(windDesc, windVal)
 
                 -- Tooltip estruturado en 4 liñas (Data, Temp/Ceo, Choiva, Vento)
-                local tTip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%\n%s",
+                local tTip = string.format("%s, %d %s %s\n%d°C%s\n%s: %s\n%s",
                     dayName, dayNum, atWord, hTime,
                     tempVal, skyPart,
-                    rainWord, rainProbVal,
+                    rainWord, if rainProbVal ~= nil then forecast.rainText(rainProbVal) else rainMissingText,
                     windLine)
+                if not h then
+                    tTip = string.format("%s, %d %s %02d:00\n%s", dayName, dayNum, atWord, hNum,
+                        tr("ui.hourly_unavailable"))
+                end
 
                 -- Altura e deseño proporcional da barra de choiva
                 local maxBarH = 20
@@ -1295,12 +1284,19 @@ render = function()
                 local barW = 3
                 local barRadius = 1
                 local barColor = isDark and "#334155" or "#94a3b8"
+                local missingRain = rainProbVal == nil
 
-                if rainProbVal > 0 then
+                if rainProbVal and rainProbVal > 0 then
                     barH = math.max(3, math.floor((rainProbVal / 100.0) * maxBarH))
                     barW = 5.0
                     barRadius = 1.6
                     barColor = isDark and "#38bdf8" or "#0284c7"
+                elseif missingRain then
+                    -- Keep the full timeline visible, with hollow marks for unknown rain.
+                    barH = 3
+                    barW = 3
+                    barRadius = 1.5
+                    barColor = "#00000000"
                 elseif isCurrent then
                     barH = 3.5
                     barW = 4
@@ -1314,8 +1310,9 @@ render = function()
                 end
 
                 local clickHandler = function()
+                    if not h then return end
                     for oIdx, ph in ipairs(hourly) do
-                        if ph.timestamp == slotTs then
+                        if ph.timestamp == h.timestamp then
                             local newOffset = math.max(0, math.min(oIdx - 1, maxOffset))
                             noctalia.state.set("hourly_offset", newOffset)
                             render()
@@ -1338,6 +1335,8 @@ render = function()
                         height = barH,
                         radius = barRadius,
                         fill = barColor,
+                        border = if missingRain then (isDark and "#64748b" or "#94a3b8") else "#00000000",
+                        borderWidth = if missingRain then 1 else 0,
                     }),
                 })
 
@@ -1357,7 +1356,7 @@ render = function()
             -- Detectar cambios meteorolóxicos para amosar iconas de xeito dinámico e contextual
             local nowIdx = nil
             if currentHourSec >= day0StartTs then
-                local diffH = math.floor((currentHourSec - day0StartTs) / 3600)
+                local diffH = math.floor(forecast.chartSlot(dailyDays, currentHourSec) or -1)
                 if diffH >= 0 and diffH < totalSlots then
                     nowIdx = diffH
                 end
@@ -1382,9 +1381,9 @@ render = function()
             for k = 0, totalSlots - 1 do
                 local hNum = k % 24
                 local isStartOfDay = (hNum == 0)
-                local slotTs = day0StartTs + k * 3600
+                local slotTs = forecast.slotTimestamp(dailyDays, k)
                 local dayIdx = math.floor(k / 24) + 1
-                local h = findHour(slotTs)
+                local h = slotHours[k]
                 local dRef = dailyDays[dayIdx]
 
                 local gName = "cloud"
@@ -1393,24 +1392,12 @@ render = function()
                 if h and h.glyph then
                     gName = h.glyph
                     gColor = h.color or (isDark and "#94a3b8" or "#64748b")
-                elseif dRef then
-                    local dg = dRef.glyph or "cloud"
-                    local dc = dRef.color or "on_surface_variant"
-                    if hNum < 7 or hNum >= 22 then
-                        if dg == "sun" then
-                            dg = "moon"
-                            dc = "primary"
-                        elseif dg == "cloud-sun" then
-                            dg = "moon-stars"
-                            dc = "primary"
-                        end
-                    end
-                    gName = dg
-                    gColor = dc
+                else
+                    gName = "minus"
                 end
 
                 local tempVal = h and tonumber(h.temp) or (dRef and tonumber(dRef.tempMin) or 0)
-                local rainProbVal = h and tonumber(h.rainProb) or (dRef and tonumber(dRef.rainProb) or 0)
+                local rainProbVal = h and forecast.rainProbability(h.rainProb)
                 local skyDesc = i18n.sky(h and (h.skyCode or h.skyId) or (dRef and dRef.skyId), h and h.skyDesc or (dRef and dRef.skyDesc))
                 local skyPart = (skyDesc ~= "") and (" · " .. skyDesc) or ""
                 local wday = h and h.weekday or (dRef and dRef.weekday or 0)
@@ -1423,15 +1410,21 @@ render = function()
                 local windArrow = getWindArrow(windDesc, windVal)
                 local windLine = formatWindTooltip(windDesc, windVal)
 
-                local tTip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%\n%s",
+                local tTip = string.format("%s, %d %s %s\n%d°C%s\n%s: %s\n%s",
                     dayName, dayNum, atWord, hTime,
                     tempVal, skyPart,
-                    rainWord, rainProbVal,
+                    rainWord, if rainProbVal ~= nil then forecast.rainText(rainProbVal) else rainMissingText,
                     windLine)
+                if not h then
+                    tTip = string.format("%s, %d %s %02d:00\n%s", dayName, dayNum, atWord, hNum,
+                        tr("ui.hourly_unavailable"))
+                    windArrow = "—"
+                end
 
                 local lblClickHandler = function()
+                    if not h then return end
                     for oIdx, ph in ipairs(hourly) do
-                        if ph.timestamp == slotTs then
+                        if ph.timestamp == h.timestamp then
                             local newOffset = math.max(0, math.min(oIdx - 1, maxOffset))
                             noctalia.state.set("hourly_offset", newOffset)
                             render()
@@ -1621,13 +1614,13 @@ render = function()
             local labelsList = {}
             for _, item in ipairs(filledList) do
                 if item.isNow then
-                    local nowTs = day0StartTs + nowIdx * 3600
+                    local nowTs = forecast.slotTimestamp(dailyDays, nowIdx)
                     local nowH = findHour(currentHourSec) or findHour(nowTs)
                     local curGName = (cur and cur.glyph) or (nowH and nowH.glyph) or "cloud-sun"
                     local curGColor = getTimelineGlyphColor(curGName, isDark)
 
                     local nowTemp = (cur and cur.temp) or (nowH and nowH.temp) or 0
-                    local nowRain = (nowH and nowH.rainProb) or (weather.rainProb or 0)
+                    local nowRain = if nowH then nowH.rainProb else (cur and cur.rainProb)
                     local nowSky = i18n.sky(cur and (cur.skyCode or cur.skyId) or (nowH and nowH.skyCode), (cur and cur.skyDesc) or (nowH and nowH.skyDesc))
                     local nowSkyPart = (nowSky ~= "") and (" · " .. nowSky) or ""
                     local nowWday = nowH and nowH.weekday or tonumber(os.date("%w", currentHourSec)) or 0
@@ -1640,10 +1633,10 @@ render = function()
                     local nowWindArrow = getWindArrow(nowWindDesc, nowWindVal)
                     local nowWindLine = formatWindTooltip(nowWindDesc, nowWindVal)
 
-                    local nowTooltip = string.format("%s, %d %s %s\n%d°C%s\n%s: %d%%\n%s",
+                    local nowTooltip = string.format("%s, %d %s %s\n%d°C%s\n%s: %s\n%s",
                         nowDayName, nowDayNum, atWord, nowTime,
                         nowTemp, nowSkyPart,
-                        rainWord, nowRain,
+                        rainWord, forecast.rainText(nowRain),
                         nowWindLine)
 
                     local nowWindLabel = (nowWindArrow == "•") and "0" or string.format("%s %d", nowWindArrow, nowWindVal)
@@ -1673,7 +1666,7 @@ render = function()
                         or (isDark and "#cbd5e1" or "#334155")
                     local lblWeight = (isStartOfDay and item.k > 0) and "bold" or "medium"
 
-                    local windLabel = (sData.windArrow == "•") and "0" or string.format("%s %d", sData.windArrow, sData.windSpeed)
+                    local windLabel = if sData.windArrow == "—" then "—" else ((sData.windArrow == "•") and "0" or string.format("%s %d", sData.windArrow, sData.windSpeed))
                     local windColor = getWindColor(sData.windSpeed, isDark)
 
                     labelsList[#labelsList + 1] = {
@@ -1802,11 +1795,7 @@ render = function()
                 border = isDark and "#252b3b" or (colors and colors.outline or "#cbd5e1"),
                 borderWidth = 1,
                 gap = 4,
-            }, {
-                selectorHeader,
-                timelineRow,
-                labelsRow,
-            })
+            }, { selectorHeader, timelineRow, labelsRow })
 
             -- ── 3.2. BARRA HORIZONTAL DÍA / NOITE SINCRONIZADA ──
             local barHeight = (s == SCALES["xlarge"]) and 20 or ((s == SCALES["large"]) and 18 or 16)
@@ -1840,7 +1829,7 @@ render = function()
 
             for i = 1, nDays do
                 local d = dailyDays[i]
-                local dayMidTs = day0StartTs + (i - 1) * 86400 + 43200
+                local dayMidTs = forecast.slotTimestamp(dailyDays, (i - 1) * 24 + 12)
                 local sRiseStr, sSetStr = shared.calcSolar(today.latitude, today.longitude, dayMidTs)
                 local riseH = parseTimeToHours(sRiseStr)
                 local setH = parseTimeToHours(sSetStr)

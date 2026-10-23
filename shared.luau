@@ -2,6 +2,7 @@
 -- Shared utilities, constants and MeteoGalicia mapping tables.
 
 local shared = {}
+local forecast = require("./forecast.luau")
 local i18n = require("./i18n.luau")
 
 shared.API_KEY = "eyJ4NXQiOiJObUU1TXpSbVpXSmtNREZtT1RJeFlqWTFNRE00TmpnM1pqVmlOR0k1WkdZM09HTXpPVEJsTURNelpUQmhOalJtWVdJNE9HUmpOR1ZpTldKak1qZGpZUSIsImtpZCI6ImdhdGV3YXlfY2VydGlmaWNhdGVfYWxpYXMiLCJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjYXJib24uc3VwZXIiLCJhcHBsaWNhdGlvbiI6eyJvd25lciI6ImFkbWluIiwidGllclF1b3RhVHlwZSI6bnVsbCwidGllciI6IlVubGltaXRlZCIsIm5hbWUiOiJ3X21ldGVvMiIsImlkIjozMzAxLCJ1dWlkIjoiMmNhMDI4N2ItNWYzYy00NGMzLTg3ZGEtOWY5ODg3NWZjNjk5In0sImlzcyI6Imh0dHBzOlwvXC9wcmQtd3NvMmFwaW0tYzAxLTAwMDEueHVudGEubG9jYWw6OTQ0NFwvb2F1dGgyXC90b2tlbiIsInRpZXJJbmZvIjp7IlB1YmxpYyI6eyJ0aWVyUXVvdGFUeXBlIjoicmVxdWVzdENvdW50IiwiZ3JhcGhRTE1heENvbXBsZXhpdHkiOjAsImdyYXBoUUxNYXhEZXB0aCI6MCwic3RvcE9uUXVvdGFSZWFjaCI6dHJ1ZSwic3Bpa2VBcnJlc3RMaW1pdCI6MCwic3Bpa2VBcnJlc3RVbml0Ijoic2VjIn19LCJrZXl0eXBlIjoiUFJPRFVDVElPTiIsInBlcm1pdHRlZFJlZmVyZXIiOiIiLCJzdWJzY3JpYmVkQVBJcyI6W3sic3Vic2NyaWJlclRlbmFudERvbWFpbiI6ImNhcmJvbi5zdXBlciIsIm5hbWUiOiJNRVRFTzJfQVBJIiwiY29udGV4dCI6IlwvbWV0ZW8yYXBpXC92MSIsInB1Ymxpc2hlciI6IkFNVEVHQVwvdWUwODIwNSIsInZlcnNpb24iOiJ2MSIsInN1YnNjcmlwdGlvblRpZXIiOiJQdWJsaWMifV0sInBlcm1pdHRlZElQIjoiIiwiaWF0IjoxNjk0MDk1MzMzLCJqdGkiOiI1NzkwYmM5NC04M2Y2LTQ4YTgtODg3Yy02MmQyNDJiMTJmZDYifQ==.W9Uc6D5te5GhMcWb-ewkiuor8rpNX5S3P89LSvrewNxNffwkQ5LC47OiSIwx0NOhZ9YKSiOf0i5L2MDjA8Roezp1xkPzC1Cx6ESkuTaXtIgu0iP4mUo6pCmwywWLhDO7_fz58k6PnPAYyehQ6R8r85nEx3Wr9F9e1u-WZx2zGTFGpqvTU9jFA1d4rlcTjTK7eGuIFSbQn6goko8elKFe3GajzGy8r6NtJLMvSgxhSpftsykx-tpGyoUVVH90dTiEul927JiYvqgOsCKa4FU1tVVY3Y9t8AJByJqsOeTz64R7KIe9A8C2WB29IewjKxDkrsypFODpOQHkIbEDhZ5g8Q=="
@@ -458,54 +459,32 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     local nowX = nil
     local nowY = nil
     if showHourly and #hourlyList >= 2 then
-        local day0StartTs = 0
-        if #hourlyList > 0 and hourlyList[1].timestamp then
-            local firstTs = tonumber(hourlyList[1].timestamp) or 0
-            local firstH = tonumber(hourlyList[1].hourNum) or tonumber(os.date("%H", firstTs)) or 0
-            day0StartTs = firstTs - firstH * 3600
-        elseif dailyDays[1] and dailyDays[1].year and dailyDays[1].year > 0 then
-            day0StartTs = os.time({
-                year = dailyDays[1].year,
-                month = dailyDays[1].month,
-                day = dailyDays[1].day,
-                hour = 0,
-                min = 0,
-                sec = 0,
-            })
-        end
-
+        local slots = forecast.chartHours(dailyDays, hourlyList)
         local hourlyPts: { ChartPoint } = {}
-        for _, h in ipairs(hourlyList) do
-            local ts = tonumber(h.timestamp) or 0
-            local diffSec = ts - day0StartTs
-            if diffSec >= 0 then
-                local dayFrac = diffSec / 86400.0
-                if dayFrac <= n then
-                    local hX = padLeft + dayFrac * colW
-                    local hY = yTemp(tonumber(h.temp) or 0)
-                    hourlyPts[#hourlyPts + 1] = { x = hX, y = hY }
-                end
+        local function finishSegment()
+            if #hourlyPts >= 2 then
+                hourlyPath ..= buildSmoothBezierPath(hourlyPts) .. " "
+            end
+            hourlyPts = {}
+        end
+        for k = 0, n * 24 - 1 do
+            local h = slots[k]
+            if h and tonumber(h.temp) then
+                hourlyPts[#hourlyPts + 1] = {
+                    x = padLeft + (k / 24) * colW,
+                    y = yTemp(tonumber(h.temp) or 0),
+                }
+            else
+                -- Missing days must remain gaps rather than interpolated forecasts.
+                finishSegment()
             end
         end
+        finishSegment()
 
-        if #hourlyPts >= 2 then
-            hourlyPath = buildSmoothBezierPath(hourlyPts)
-        end
-
-        -- Posición do momento actual (Agora) sobre a curva
-        local nowSec = (opts and opts.nowTimestamp) or os.time()
-        local nowDiff = nowSec - day0StartTs
-        if nowDiff >= 0 then
-            local nowFrac = nowDiff / 86400.0
-            if nowFrac <= n then
-                nowX = padLeft + nowFrac * colW
-                local cTemp = opts and opts.currentTemp
-                if cTemp then
-                    nowY = yTemp(tonumber(cTemp) or 0)
-                elseif #hourlyPts > 0 then
-                    nowY = hourlyPts[1].y
-                end
-            end
+        local nowSlot = forecast.chartSlot(dailyDays, (opts and opts.nowTimestamp) or os.time())
+        if nowSlot and slots[math.floor(nowSlot)] then
+            nowX = padLeft + (nowSlot / 24) * colW
+            nowY = yTemp(tonumber(opts.currentTemp) or tonumber(slots[math.floor(nowSlot)].temp) or 0)
         end
     end
 
@@ -691,7 +670,8 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
 
         local dayColor = isToday and theme.todayTitle or theme.dayTitle
         local skyClean = shared.cleanHtml(i18n.sky(d.skyId, d.skyDesc)):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
-        local rain = tonumber(d.rainProb) or 0
+        local rain = forecast.rainProbability(d.rainProb) or 0
+        local rainText = forecast.rainText(d.rainProb)
 
         local skyFontSize = (#skyClean > 15) and (isXlarge and 12.5 or 11.5) or (isXlarge and 14.0 or 13.0)
         local rainFontSize = isXlarge and 13.5 or 12.5
@@ -702,7 +682,7 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         local gap2 = 12
         local dropW = 10
         local gap3 = 4
-        local rainNumW = #(tostring(rain) .. "%") * 8.5
+        local rainNumW = #rainText * 8.5
         local rainGroupW = dropW + gap3 + rainNumW
         local groupW = iconW + gap1 + textW + gap2 + rainGroupW
 
@@ -772,7 +752,7 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     <g transform="translate(%.1f, %.1f) scale(%.2f)">
       <path d="M 4 1 C 4 1, 1 5, 1 8 A 3 3 0 0 0 7 8 C 7 5, 4 1, 4 1 Z" fill="%s"/>
     </g>
-    <text x="%.1f" y="%.1f" fill="%s" font-size="%.1f" font-weight="bold" text-anchor="start">%d%%</text>
+    <text x="%.1f" y="%.1f" fill="%s" font-size="%.1f" font-weight="bold" text-anchor="start">%s</text>
     <rect x="%.1f" y="%.1f" width="%.1f" height="2.5" rx="1.25" fill="%s"/>
     <rect x="%.1f" y="%.1f" width="%.1f" height="2.5" rx="1.25" fill="url(#rainGaugeGrad)"/>
     <!-- Liña 3: Vento -->
@@ -781,7 +761,7 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
     iconSvg,
     textX, textY, theme.skyDesc, skyFontSize, skyClean,
     dropX, dropY, dropScale, theme.rainDrop,
-    rainTextX, rainTextY, theme.rainText, rainFontSize, rain,
+    rainTextX, rainTextY, theme.rainText, rainFontSize, rainText,
     gaugeX, gaugeY, gaugeW, theme.rainGaugeBg,
     gaugeX, gaugeY, fillW,
     windSvg)
