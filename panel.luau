@@ -167,8 +167,8 @@ local SCALES: { [string]: ScaleConfig } = {
         btnSize = "md",
     },
     xlarge = {
-        panelPadding = 21,
-        panelGap = 15,
+        panelPadding = 18,
+        panelGap = 12,
         headerGlyph = 76,
         headerTown = 40,
         headerBadge = 14,
@@ -181,9 +181,9 @@ local SCALES: { [string]: ScaleConfig } = {
         headerSunText = 18,
         headerSunTime = 28,
         headerSunPadH = 22,
-        headerSunPadV = 12,
+        headerSunPadV = 11,
         headerSunGap = 18,
-        headerSunDividerHeight = 42,
+        headerSunDividerHeight = 40,
         sectionIcon = 24,
         sectionTitle = 23,
         sectionSub = 17,
@@ -196,8 +196,8 @@ local SCALES: { [string]: ScaleConfig } = {
         hourlyRainIcon = 15,
         hourlyRainText = 17,
         hourlyRowGap = 10,
-        dailyPad = 14,
-        dailyGap = 8,
+        dailyPad = 12,
+        dailyGap = 7,
         dailyTitle = 21,
         dailyDate = 16,
         dailyGlyph = 48,
@@ -207,10 +207,10 @@ local SCALES: { [string]: ScaleConfig } = {
         dailyRainText = 17,
         dailyWindText = 15,
         chartWidth = 1330,
-        chartHeight = 310,
+        chartHeight = 285,
         commentTitle = 21,
         commentText = 18,
-        commentPad = 16,
+        commentPad = 14,
         footerIcon = 20,
         footerText = 17,
         btnSize = "lg",
@@ -420,20 +420,20 @@ end
 local function getThemeFills(): (string, string, string, string)
     local opacitySetting = tostring(noctalia.getConfig("panel_opacity") or "opaque"):lower()
     local rootFill = "surface/0.97"
-    local cardBgNorm = "surface_variant/0.92"
+    local cardBgNorm = "surface_container/0.92"
     local cardBgActive = "primary/0.24"
-    local commentaryBg = "surface_variant/0.88"
+    local commentaryBg = "surface_container/0.88"
 
     if opacitySetting == "subtle" then
         rootFill = "surface/0.88"
-        cardBgNorm = "surface_variant/0.75"
+        cardBgNorm = "surface_container/0.75"
         cardBgActive = "primary/0.18"
-        commentaryBg = "surface_variant/0.70"
+        commentaryBg = "surface_container/0.70"
     elseif opacitySetting == "glass" then
         rootFill = "surface/0.65"
-        cardBgNorm = "surface_variant/0.50"
+        cardBgNorm = "surface_container/0.50"
         cardBgActive = "primary/0.14"
-        commentaryBg = "surface_variant/0.45"
+        commentaryBg = "surface_container/0.45"
     end
 
     return rootFill, cardBgNorm, cardBgActive, commentaryBg
@@ -523,7 +523,7 @@ render = function()
                 align = "center",
                 fill = rootFill,
                 radius = 16,
-                border = "outline/0.25",
+                border = "outline_variant/0.25",
                 borderWidth = 1,
                 flexGrow = 1,
             }, {
@@ -539,7 +539,7 @@ render = function()
                 align = "center",
                 fill = rootFill,
                 radius = 16,
-                border = "outline/0.25",
+                border = "outline_variant/0.25",
                 borderWidth = 1,
                 flexGrow = 1,
             }, {
@@ -580,7 +580,7 @@ render = function()
             paddingV = math.max(5, math.floor(s.headerSunPadV * 0.7)),
             radius = 12,
             fill = cardBgNorm,
-            border = "outline/0.25",
+            border = "outline_variant/0.25",
             borderWidth = 1,
             tooltip = tooltipText,
         }, {
@@ -825,7 +825,7 @@ render = function()
                 radius = 10,
                 minWidth = cardMinWidth,
                 fill = isCurrent and cardBgActive or cardBgNorm,
-                border = isCurrent and "primary" or "outline/0.25",
+                border = isCurrent and "primary" or "outline_variant/0.25",
                 borderWidth = 1,
                 flexGrow = 1,
                 tooltip = string.format(tr("ui.municipality_tooltip"), c.name, c.province, c.id),
@@ -992,8 +992,8 @@ render = function()
             paddingH = 14,
             paddingV = 4,
             radius = 8,
-            fill = "surface_variant/0.50",
-            border = "outline/0.25",
+            fill = "surface_container/0.50",
+            border = "outline_variant/0.25",
             borderWidth = 1,
             align = "center",
             gap = 6,
@@ -1060,7 +1060,7 @@ render = function()
         local isCurrent = (h.timestamp == currentHourSec) or (idx == 1 and hourlyOffset == 0)
         local isStartOfDay = (h.hourNum == 0)
         local cardBg = isCurrent and cardBgActive or cardBgNorm
-        local cardBorder = isCurrent and "primary/0.60" or (isStartOfDay and "secondary/0.40" or "outline/0.25")
+        local cardBorder = isCurrent and "primary/0.60" or (isStartOfDay and "secondary/0.40" or "outline_variant/0.25")
 
         local timeColor = "on_surface_variant"
         if isCurrent then
@@ -1165,10 +1165,10 @@ render = function()
         if noctalia.getColor ~= nil then
             colors = {
                 surface = noctalia.getColor("surface"),
-                surfaceVariant = noctalia.getColor("surface_variant"),
+                surfaceContainer = noctalia.getColor("surface_container"),
                 onSurface = noctalia.getColor("on_surface"),
                 onSurfaceVariant = noctalia.getColor("on_surface_variant"),
-                outline = noctalia.getColor("outline"),
+                outlineVariant = noctalia.getColor("outline_variant"),
                 primary = noctalia.getColor("primary"),
                 secondary = noctalia.getColor("secondary"),
             }
@@ -1756,7 +1756,7 @@ render = function()
                 ui.label({
                     text = "·",
                     fontSize = s.sectionSub,
-                    color = "outline",
+                    color = "outline_variant",
                 }),
                 ui.row({ gap = 5, align = "center" }, {
                     ui.glyph({
@@ -1791,8 +1791,8 @@ render = function()
                 width = s.chartWidth,
                 paddingV = 7,
                 radius = 10,
-                fill = isDark and "#141720" or (colors and colors.surfaceVariant or "#e9efef"),
-                border = isDark and "#252b3b" or (colors and colors.outline or "#cbd5e1"),
+                fill = isDark and "#141720" or (colors and colors.surfaceContainer or "#e9efef"),
+                border = isDark and "#252b3b" or (colors and colors.outlineVariant or "#cbd5e1"),
                 borderWidth = 1,
                 gap = 4,
             }, { selectorHeader, timelineRow, labelsRow })
@@ -2020,7 +2020,7 @@ render = function()
             padding = s.commentPad,
             radius = 8,
             fill = commentaryBg,
-            border = "outline/0.25",
+            border = "outline_variant/0.25",
             borderWidth = 1,
         }, {
             ui.label({
@@ -2077,11 +2077,11 @@ render = function()
     panel.render(ui.column({
         gap = s.panelGap,
         padding = s.panelPadding,
+        align = "stretch",
         fill = rootFill,
         radius = 16,
-        border = "outline/0.25",
+        border = "outline_variant/0.25",
         borderWidth = 1,
-        flexGrow = 1,
     }, rootChildren))
 end
 

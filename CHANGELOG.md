@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.2 — 2026-10-27
+
+- Adapt to Noctalia 5.4 (`plugin_api = 43`) and Material 3 palette tokens (`surface_container`, `outline_variant`).
+- Calibrate panel dimensions for `height = "content"` with `max_height = 980`, fitting the `xlarge` 4K preset without overflow or excess empty space.
+- Fine-tune `xlarge` vertical rhythm (chart height, padding and gaps) so the full forecast view fits within the panel geometry.
+- Preserve direct hourly mouse-wheel stepping by avoiding unwanted root scroll interception.
+
 ## 1.1.1 — 2026-10-23
 
 - Align hourly curves, rain/wind timelines and the current-time marker with local

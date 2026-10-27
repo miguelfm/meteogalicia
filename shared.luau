@@ -498,8 +498,8 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
 
     -- Paleta de cores adaptativa segundo o modo de tema (escuro vs claro)
     local theme = {
-        cardBg = isDark and "#141720" or (colors.surfaceVariant or "#e9efef"),
-        cardBorder = isDark and "#252b3b" or (colors.outline or "#cbd5e1"),
+        cardBg = isDark and "#141720" or (colors.surfaceContainer or "#e9efef"),
+        cardBorder = isDark and "#252b3b" or (colors.outlineVariant or "#cbd5e1"),
         daySep = isDark and "#1c2230" or "#e2e8f0",
         windSep = isDark and "#222838" or "#e2e8f0",
         gridLine = isDark and "#222838" or "#e2e8f0",
@@ -508,12 +508,12 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
 
         -- Curva térmica máxima
         maxTempStroke = isDark and "#ff7849" or "#ea580c",
-        maxTempPointFill = isDark and "#141720" or (colors.surfaceVariant or "#e9efef"),
+        maxTempPointFill = isDark and "#141720" or (colors.surfaceContainer or "#e9efef"),
         maxTempText = isDark and "#ff7849" or "#c2410c",
 
         -- Curva térmica mínima
         minTempStroke = isDark and "#38bdf8" or "#0284c7",
-        minTempPointFill = isDark and "#141720" or (colors.surfaceVariant or "#e9efef"),
+        minTempPointFill = isDark and "#141720" or (colors.surfaceContainer or "#e9efef"),
         minTempText = isDark and "#38bdf8" or "#0369a1",
 
         -- Degradado térmico
@@ -543,7 +543,7 @@ function shared.generateDailyChartSvg(dailyDays: { any }, width: number, height:
         hourlyStroke = isDark and "#8f9690" or "#58605a",
         hourlyGlow = isDark and "#8f9690" or "#58605a",
         nowDotFill = isDark and "#8f9690" or "#58605a",
-        nowDotRing = isDark and "#141720" or (colors.surfaceVariant or "#e9efef"),
+        nowDotRing = isDark and "#141720" or (colors.surfaceContainer or "#e9efef"),
     }
 
     local svgParts = {}

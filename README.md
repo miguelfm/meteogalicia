@@ -6,6 +6,10 @@
 
 Plugin nativo para o shell de escritorio **Noctalia** (en Wayland / Hyprland) que amosa a predición meteorolóxica oficial de Galicia por concellos, conectándose directamente á API REST de **MeteoGalicia** (`meteo2api` da Xunta de Galicia).
 
+Require **Noctalia 5.4 ou posterior** (`plugin_api = 43`). O panel axusta a altura
+ao contido ata un máximo de 980 píxeles lóxicos (adaptado e calibrado para pantallas
+4K e as distintas escalas da interface); os estados de carga e erro quedan compactos.
+
 ![Noctalia Plugin](https://img.shields.io/badge/Noctalia-v5_Plugin-7c3aed?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
 ![Data Source](https://img.shields.io/badge/Data-MeteoGalicia_REST_API-0284c7?style=flat-square)
