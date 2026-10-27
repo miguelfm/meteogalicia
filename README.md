@@ -1,5 +1,7 @@
 # MeteoGalicia para Noctalia (v5)
 
+[Integración e límites de Noctalia 5.4](docs/noctalia-5.4.md).
+
 > **Proxecto persoal e non oficial**, desenvolvido e mantido por `miguelfm`.
 > Non está afiliado, patrocinado nin avalado por MeteoGalicia ou pola Xunta de Galicia.
 > Emprega as súas APIs públicas como fonte de datos meteorolóxicos.
