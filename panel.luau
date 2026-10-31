@@ -625,28 +625,103 @@ render = function()
     local cardHumidity = makeHeaderCard("droplet", "secondary", tr("ui.humidity_title", "Humidade"), humText, humTip)
 
     -- Calidade do aire actual (ICA)
+    local aq = cur.airQuality
     local icaVal = tonumber(cur.ica or today.ica) or 0
+    local icaLevel = 1
+    if aq and aq.ica and aq.ica > 0 then
+        if aq.ica >= 4.0 then
+            icaLevel = 5
+        elseif aq.ica >= 3.0 then
+            icaLevel = 4
+        elseif aq.ica >= 2.0 then
+            icaLevel = 3
+        elseif aq.ica >= 1.0 then
+            icaLevel = 2
+        else
+            icaLevel = 1
+        end
+    elseif icaVal >= 4 then
+        icaLevel = 4
+    elseif icaVal >= 3 then
+        icaLevel = 3
+    elseif icaVal >= 2 then
+        icaLevel = 2
+    elseif icaVal == 0 then
+        icaLevel = 0
+    end
+
     local icaDesc = tr("ui.aqi.good")
     local icaColor = isDark and "#34d399" or "#059669"
     local icaFull = i18n.format("ui.aqi.full", tr("ui.aqi.good"), 1)
-    if icaVal >= 4 then
+
+    if icaLevel >= 5 then
         icaDesc = tr("ui.aqi.very_poor")
         icaColor = isDark and "#f87171" or "#dc2626"
-        icaFull = i18n.format("ui.aqi.full", tr("ui.aqi.very_poor"), 4)
-    elseif icaVal >= 3 then
+        icaFull = i18n.format("ui.aqi.full", tr("ui.aqi.very_poor"), 5)
+    elseif icaLevel == 4 then
         icaDesc = tr("ui.aqi.poor")
         icaColor = isDark and "#fb923c" or "#ea580c"
-        icaFull = i18n.format("ui.aqi.full", tr("ui.aqi.poor"), 3)
-    elseif icaVal >= 2 then
-        icaDesc = tr("ui.aqi.fair")
+        icaFull = i18n.format("ui.aqi.full", tr("ui.aqi.poor"), 4)
+    elseif icaLevel == 3 then
+        icaDesc = tr("ui.aqi.moderate")
         icaColor = isDark and "#fbbf24" or "#d97706"
+        icaFull = i18n.format("ui.aqi.full", tr("ui.aqi.moderate"), 3)
+    elseif icaLevel == 2 then
+        icaDesc = tr("ui.aqi.fair")
+        icaColor = isDark and "#38bdf8" or "#0284c7"
         icaFull = i18n.format("ui.aqi.full", tr("ui.aqi.fair"), 2)
-    elseif icaVal == 0 then
+    elseif icaLevel == 0 then
         icaDesc = "--"
         icaColor = "on_surface_variant"
         icaFull = tr("ui.not_available")
     end
-    local icaTip = tr("ui.air_quality_tooltip", "Calidade do aire: ") .. icaFull
+
+    if aq and aq.station and aq.station ~= "" then
+        if isEn and aq.icaEn and aq.icaEn ~= "" then
+            icaDesc = aq.icaEn
+        elseif aq.icaGl and aq.icaGl ~= "" then
+            icaDesc = aq.icaGl
+        end
+        icaFull = i18n.format("ui.aqi.val_full", icaDesc, aq.ica)
+    end
+
+    local icaTip = ""
+    if aq and aq.station and aq.station ~= "" then
+        local titleLine = string.format("🍃 %s: %s", tr("ui.air_quality_title"), icaFull)
+        local stationLine = ""
+        if aq.distanceKm and aq.distanceKm > 0 then
+            stationLine = string.format("📍 %s", i18n.format("ui.aqi.station", aq.station, aq.distanceKm, aq.time or ""))
+        else
+            stationLine = string.format("📍 %s", i18n.format("ui.aqi.station_simple", aq.station, aq.time or ""))
+        end
+        local polLine = ""
+        if aq.pollutant and aq.pollutant ~= "" then
+            polLine = string.format("🔬 %s", i18n.format("ui.aqi.pollutant", aq.pollutantLabel or aq.pollutant, aq.value or 0, aq.pollutantUnit or "µg/m³"))
+        end
+        local recKey = "ui.aqi.rec_1"
+        if icaLevel >= 5 then recKey = "ui.aqi.rec_5"
+        elseif icaLevel == 4 then recKey = "ui.aqi.rec_4"
+        elseif icaLevel == 3 then recKey = "ui.aqi.rec_3"
+        elseif icaLevel == 2 then recKey = "ui.aqi.rec_2"
+        end
+        local recLine = string.format("🛡️ %s", tr(recKey))
+
+        local tipParts = { titleLine, stationLine }
+        if polLine ~= "" then tipParts[#tipParts + 1] = polLine end
+        tipParts[#tipParts + 1] = recLine
+        icaTip = table.concat(tipParts, "\n")
+    else
+        local titleLine = string.format("🍃 %s: %s", tr("ui.air_quality_title"), icaFull)
+        local modelLine = string.format("📊 %s", tr("ui.aqi.forecast_hint"))
+        local recKey = "ui.aqi.rec_1"
+        if icaLevel >= 4 then recKey = "ui.aqi.rec_4"
+        elseif icaLevel == 3 then recKey = "ui.aqi.rec_3"
+        elseif icaLevel == 2 then recKey = "ui.aqi.rec_2"
+        end
+        local recLine = string.format("🛡️ %s", tr(recKey))
+        icaTip = table.concat({ titleLine, modelLine, recLine }, "\n")
+    end
+
     local cardAirQuality = makeHeaderCard("leaf", icaColor, tr("ui.air_quality_title", "Calidade aire"), icaDesc, icaTip)
 
     local headerCards = ui.row({ gap = math.max(6, math.floor(s.panelGap * 0.5)), align = "center" }, {

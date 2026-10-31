@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0 — 2026-10-31
+
+- Integrar a rede de estacións de calidade do aire de MeteoGalicia en tempo real (`jsonICAActual.action`).
+- Abrir un tooltip flotante detallado ao pousar o rato sobre a tarxeta de calidade do aire con:
+  - Estación de medición máis próxima e distancia en quilómetros (cálculo xeodésico esférico).
+  - Contaminante determinante crítico ($\text{PM}_{2.5}$, $\text{PM}_{10}$, $\text{NO}_2$, $\text{O}_3$, $\text{SO}_2$) e a súa concentración exacta en $\mu\text{g}/\text{m}^3$.
+  - Índice cuantitativo continuo (ICA) e hora da última medición validada.
+  - Recomendación sanitaria e de actividade exterior segundo o nivel oficial de calidade do aire.
+  - Fallback automático á predición xeral do modelo municipal para zonas sen estación próxima ou incidencias no servizo.
+- Actualizar os catálogos de tradución (`gl-ES` e `en`) con paridade estrita de claves e parámetros.
+
 ## 1.1.2 — 2026-10-27
 
 - Adapt to Noctalia 5.4 (`plugin_api = 43`) and Material 3 palette tokens (`surface_container`, `outline_variant`).

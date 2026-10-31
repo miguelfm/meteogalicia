@@ -120,6 +120,36 @@ shared.DEFAULT_LON = -8.167317
 shared.CHART_PAD_LEFT = 48
 shared.CHART_PAD_RIGHT = 52
 
+-- Distancia xeográfica en quilómetros entre dúas coordenadas mediante proxección equirrectangular esférica
+function shared.distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number
+    local dLat = math.rad(lat2 - lat1)
+    local dLon = math.rad(lon2 - lon1)
+    local meanLat = math.rad((lat1 + lat2) * 0.5)
+    local x = dLon * math.cos(meanLat)
+    local y = dLat
+    return math.sqrt(x * x + y * y) * 6371.0
+end
+
+-- Formato lexible e unidades dos contaminantes principais da Rede de Calidade do Aire
+function shared.formatPollutant(code: string?): (string, string)
+    if not code or code == "" then return "--", "µg/m³" end
+    local c = string.upper(code)
+    if c == "PM25" or c == "PM2.5" or c == "PM2_5" then
+        return "PM₂.₅", "µg/m³"
+    elseif c == "PM10" then
+        return "PM₁₀", "µg/m³"
+    elseif c == "NO2" then
+        return "NO₂", "µg/m³"
+    elseif c == "O3" then
+        return "O₃", "µg/m³"
+    elseif c == "SO2" then
+        return "SO₂", "µg/m³"
+    elseif c == "CO" then
+        return "CO", "mg/m³"
+    end
+    return code, "µg/m³"
+end
+
 -- Cálculo astronómico oficial de orto (amencer) e ocaso (solpor) segundo algoritmo solar NOAA
 function shared.calcSolar(lat: number?, lon: number?, ts: number?): (string, string)
     local effectiveLat = lat or shared.DEFAULT_LAT

@@ -411,7 +411,7 @@ local function poll()
                     }
                 end
 
-                local finishPayload = function(humidityVal: number?, stationName: string?)
+                local finishPayload = function(humidityVal: number?, stationName: string?, airQualityData: any?)
                     inFlight = false
                     noctalia.state.set("weather_loading", false)
 
@@ -432,6 +432,7 @@ local function poll()
                             humidity = humidityVal,
                             stationName = stationName,
                             ica = (currentEntry and currentEntry.ica) or todayInfo.ica or 0,
+                            airQuality = airQualityData,
                         },
                         today = todayInfo,
                         yesterday = yesterdayInfo,
@@ -444,6 +445,59 @@ local function poll()
 
                     noctalia.state.set("weather_error", nil)
                     noctalia.state.set("weather", payload)
+                end
+
+                local fetchAirQuality = function(hVal: number?, sName: string?)
+                    noctalia.http({
+                        url = "https://servizos.meteogalicia.gal/mgrss/caire/jsonICAActual.action",
+                        method = "GET",
+                    }, function(airRes)
+                        local airData = nil
+                        if airRes and airRes.ok and airRes.status == 200 and airRes.body then
+                            local aOk, aJson = pcall(function()
+                                return noctalia.json.decode(airRes.body)
+                            end)
+                            if aOk and type(aJson) == "table" and type(aJson.icas) == "table" then
+                                local bestAirD = 1e9
+                                local bestAir = nil
+                                for _, s in ipairs(aJson.icas) do
+                                    local sLat = tonumber(s.latitud)
+                                    local sLon = tonumber(s.longitud)
+                                    local sIca = tonumber(s.ica)
+                                    local sVal = tonumber(s.valor)
+                                    if sLat and sLon and sIca and sIca >= 0 and sVal and sVal >= 0 then
+                                        local dKm = shared.distanceKm(lat, lon, sLat, sLon)
+                                        if dKm < bestAirD then
+                                            bestAirD = dKm
+                                            bestAir = s
+                                        end
+                                    end
+                                end
+                                if bestAir then
+                                    local polCode = tostring(bestAir.maximo or "")
+                                    local polLabel, polUnit = shared.formatPollutant(polCode)
+                                    local tStr = tostring(bestAir.fecha or "")
+                                    local hhmm = tStr:match("(%d%d:%d%d)") or tStr
+                                    airData = {
+                                        station = bestAir.estacion or "",
+                                        stationId = tonumber(bestAir.idEstacion) or 0,
+                                        distanceKm = math.floor(bestAirD * 10 + 0.5) / 10,
+                                        ica = tonumber(bestAir.ica) or 0,
+                                        icaGl = bestAir.icaGl or "",
+                                        icaEs = bestAir.icaEs or "",
+                                        icaEn = bestAir.icaEn or "",
+                                        pollutant = polCode,
+                                        pollutantLabel = polLabel,
+                                        pollutantUnit = polUnit,
+                                        value = tonumber(bestAir.valor) or 0,
+                                        color = bestAir.color or "",
+                                        time = hhmm,
+                                    }
+                                end
+                            end
+                        end
+                        finishPayload(hVal, sName, airData)
+                    end)
                 end
 
                 -- Obter observación en tempo real da estación meteorolóxica máis próxima para humidade relativa
@@ -478,7 +532,7 @@ local function poll()
                             end
                         end
                     end
-                    finishPayload(humidityVal, stationName)
+                    fetchAirQuality(humidityVal, stationName)
                 end)
             end)
         end)
