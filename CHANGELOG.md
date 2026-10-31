@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.1 — 2026-10-31
+
+- Corrixir a ligazón web de calidade do aire de MeteoGalicia actualizándoa á ruta oficial actual (`/web/ica/portada`) en substitución do antigo enderezo que devolvía erro 404 no navegador.
+- Corrixir o cálculo e redondeo das distancias ás estacións de calidade do aire:
+  - Aplicar a fórmula esférica de Haversine para obter a distancia ortodrómica exacta.
+  - Mostrar distancias con precisión dun decimal (`5.1 km`, `6.2 km`, `6.5 km`) tanto nas tarxetas de detalle como no tooltip, eliminando o redondeo a enteiros (`~6 km`) que provocaba que estacións a diferentes distancias parecesen coincidir.
+  - Ordenar internamente pola distancia xeodésica real sen perdas de precisión intermedias.
+
 ## 1.3.0 — 2026-10-31
 
 - Engadir vista detallada interactiva da calidade do aire premendo na tarxeta da cabeceira ou cos atallos de teclado `A` / `Q` (e `Esc` para pechar):

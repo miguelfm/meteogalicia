@@ -10,10 +10,11 @@ from pathlib import Path
 def distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     d_lat = math.radians(lat2 - lat1)
     d_lon = math.radians(lon2 - lon1)
-    mean_lat = math.radians((lat1 + lat2) * 0.5)
-    x = d_lon * math.cos(mean_lat)
-    y = d_lat
-    return math.sqrt(x * x + y * y) * 6371.0
+    r_lat1 = math.radians(lat1)
+    r_lat2 = math.radians(lat2)
+    a = math.sin(d_lat * 0.5) ** 2 + math.cos(r_lat1) * math.cos(r_lat2) * math.sin(d_lon * 0.5) ** 2
+    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(max(0.0, 1.0 - a)))
+    return 6371.0 * c
 
 
 def format_pollutant(code: str) -> tuple[str, str]:

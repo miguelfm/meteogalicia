@@ -472,10 +472,12 @@ local function poll()
                                         local polLabel, polUnit = shared.formatPollutant(polCode)
                                         local tStr = tostring(s.fecha or "")
                                         local hhmm = tStr:match("(%d%d:%d%d)") or tStr
+                                        local roundedKm = math.floor(dKm * 10 + 0.5) / 10
                                         table.insert(validList, {
                                             station = s.estacion or "",
                                             stationId = tonumber(s.idEstacion) or 0,
-                                            distanceKm = math.floor(dKm * 10 + 0.5) / 10,
+                                            rawDistance = dKm,
+                                            distanceKm = roundedKm,
                                             approxKm = math.max(1, math.floor(dKm + 0.5)),
                                             ica = tonumber(s.ica) or 0,
                                             icaGl = s.icaGl or "",
@@ -492,7 +494,7 @@ local function poll()
                                 end
 
                                 table.sort(validList, function(a, b)
-                                    return a.distanceKm < b.distanceKm
+                                    return a.rawDistance < b.rawDistance
                                 end)
 
                                 if #validList > 0 then

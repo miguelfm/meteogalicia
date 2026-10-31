@@ -103,7 +103,7 @@
   "ui.aqi.very_poor": "Moi mala",
   "ui.aqi.full": "%s (ICA %d)",
   "ui.aqi.val_full": "%s (ICA %.1f)",
-  "ui.aqi.station": "Estación de referencia: %s (~%d km) · %s",
+  "ui.aqi.station": "Estación de referencia: %s (%.1f km) · %s",
   "ui.aqi.station_simple": "Estación de referencia: %s · %s",
   "ui.aqi.pollutant": "Contaminante determinante: %s (%.1f %s)",
   "ui.aqi.forecast_hint": "Predición xeral do modelo para o concello",

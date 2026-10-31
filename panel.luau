@@ -280,7 +280,7 @@ function onOpenWeb()
 end
 
 function onOpenAirWeb()
-    noctalia.runAsync("xdg-open 'https://www.meteogalicia.gal/web/medioambiente/calidadeAire/calidadeAireIndex.action'")
+    noctalia.runAsync("xdg-open 'https://www.meteogalicia.gal/web/ica/portada'")
 end
 
 function onOpenSettings()
@@ -725,8 +725,7 @@ render = function()
         local titleLine = string.format("🍃 %s: %s", tr("ui.air_quality_title"), icaFull)
         local stationLine = ""
         if aq.distanceKm and aq.distanceKm > 0 then
-            local approxKm = math.max(1, math.floor(aq.distanceKm + 0.5))
-            stationLine = string.format("📍 %s", i18n.format("ui.aqi.station", aq.station, approxKm, aq.time or ""))
+            stationLine = string.format("📍 %s", i18n.format("ui.aqi.station", aq.station, aq.distanceKm, aq.time or ""))
         else
             stationLine = string.format("📍 %s", i18n.format("ui.aqi.station_simple", aq.station, aq.time or ""))
         end
@@ -890,7 +889,7 @@ render = function()
             end
 
             local isPrimary = (i == 1)
-            local distStr = st.approxKm and string.format("~%d km", st.approxKm) or (st.distanceKm and string.format("%.1f km", st.distanceKm) or "")
+            local distStr = (st.distanceKm and st.distanceKm > 0) and string.format("%.1f km", st.distanceKm) or ""
 
             local card = ui.column({
                 gap = 10,

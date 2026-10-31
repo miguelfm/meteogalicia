@@ -120,14 +120,15 @@ shared.DEFAULT_LON = -8.167317
 shared.CHART_PAD_LEFT = 48
 shared.CHART_PAD_RIGHT = 52
 
--- Distancia xeográfica en quilómetros entre dúas coordenadas mediante proxección equirrectangular esférica
+-- Distancia xeográfica en quilómetros entre dúas coordenadas mediante fórmula de Haversine
 function shared.distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number
     local dLat = math.rad(lat2 - lat1)
     local dLon = math.rad(lon2 - lon1)
-    local meanLat = math.rad((lat1 + lat2) * 0.5)
-    local x = dLon * math.cos(meanLat)
-    local y = dLat
-    return math.sqrt(x * x + y * y) * 6371.0
+    local rLat1 = math.rad(lat1)
+    local rLat2 = math.rad(lat2)
+    local a = math.sin(dLat * 0.5) ^ 2 + math.cos(rLat1) * math.cos(rLat2) * math.sin(dLon * 0.5) ^ 2
+    local c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(math.max(0.0, 1.0 - a)))
+    return 6371.0 * c
 end
 
 -- Formato lexible e unidades dos contaminantes principais da Rede de Calidade do Aire
