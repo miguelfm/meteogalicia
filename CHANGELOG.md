@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0 — 2026-10-31
+
+- Engadir vista detallada interactiva da calidade do aire premendo na tarxeta da cabeceira ou cos atallos de teclado `A` / `Q` (e `Esc` para pechar):
+  - Dashboard comparativo das 3 estacións de medición máis próximas á capitalidade municipal ordenadas por distancia xeodésica real.
+  - Para cada estación: distancia estimada (~km), hora da lectura, índice ICA continuo e estado descritivo con código de cor estándar, contaminante determinante coa súa concentración exacta ($\mu\text{g}/\text{m}^3$) e consello de saúde.
+  - Ligazón directa ao portal oficial de calidade do aire de MeteoGalicia.
+  - Transición limpa que substitúe a predición meteorolóxica mentres estea activa a vista detallada, garantindo un axuste vertical perfecto sen barras de desprazamento.
+
 ## 1.2.0 — 2026-10-31
 
 - Integrar a rede de estacións de calidade do aire de MeteoGalicia en tempo real (`jsonICAActual.action`).

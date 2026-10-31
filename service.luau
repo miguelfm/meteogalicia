@@ -411,7 +411,7 @@ local function poll()
                     }
                 end
 
-                local finishPayload = function(humidityVal: number?, stationName: string?, airQualityData: any?)
+                local finishPayload = function(humidityVal: number?, stationName: string?, airQualityData: any?, airStations: any?)
                     inFlight = false
                     noctalia.state.set("weather_loading", false)
 
@@ -433,6 +433,7 @@ local function poll()
                             stationName = stationName,
                             ica = (currentEntry and currentEntry.ica) or todayInfo.ica or 0,
                             airQuality = airQualityData,
+                            airQualityStations = airStations or {},
                         },
                         today = todayInfo,
                         yesterday = yesterdayInfo,
@@ -453,13 +454,13 @@ local function poll()
                         method = "GET",
                     }, function(airRes)
                         local airData = nil
+                        local airStations = {}
                         if airRes and airRes.ok and airRes.status == 200 and airRes.body then
                             local aOk, aJson = pcall(function()
                                 return noctalia.json.decode(airRes.body)
                             end)
                             if aOk and type(aJson) == "table" and type(aJson.icas) == "table" then
-                                local bestAirD = 1e9
-                                local bestAir = nil
+                                local validList = {}
                                 for _, s in ipairs(aJson.icas) do
                                     local sLat = tonumber(s.latitud)
                                     local sLon = tonumber(s.longitud)
@@ -467,36 +468,42 @@ local function poll()
                                     local sVal = tonumber(s.valor)
                                     if sLat and sLon and sIca and sIca >= 0 and sVal and sVal >= 0 then
                                         local dKm = shared.distanceKm(lat, lon, sLat, sLon)
-                                        if dKm < bestAirD then
-                                            bestAirD = dKm
-                                            bestAir = s
-                                        end
+                                        local polCode = tostring(s.maximo or "")
+                                        local polLabel, polUnit = shared.formatPollutant(polCode)
+                                        local tStr = tostring(s.fecha or "")
+                                        local hhmm = tStr:match("(%d%d:%d%d)") or tStr
+                                        table.insert(validList, {
+                                            station = s.estacion or "",
+                                            stationId = tonumber(s.idEstacion) or 0,
+                                            distanceKm = math.floor(dKm * 10 + 0.5) / 10,
+                                            approxKm = math.max(1, math.floor(dKm + 0.5)),
+                                            ica = tonumber(s.ica) or 0,
+                                            icaGl = s.icaGl or "",
+                                            icaEs = s.icaEs or "",
+                                            icaEn = s.icaEn or "",
+                                            pollutant = polCode,
+                                            pollutantLabel = polLabel,
+                                            pollutantUnit = polUnit,
+                                            value = tonumber(s.valor) or 0,
+                                            color = s.color or "",
+                                            time = hhmm,
+                                        })
                                     end
                                 end
-                                if bestAir then
-                                    local polCode = tostring(bestAir.maximo or "")
-                                    local polLabel, polUnit = shared.formatPollutant(polCode)
-                                    local tStr = tostring(bestAir.fecha or "")
-                                    local hhmm = tStr:match("(%d%d:%d%d)") or tStr
-                                    airData = {
-                                        station = bestAir.estacion or "",
-                                        stationId = tonumber(bestAir.idEstacion) or 0,
-                                        distanceKm = math.floor(bestAirD * 10 + 0.5) / 10,
-                                        ica = tonumber(bestAir.ica) or 0,
-                                        icaGl = bestAir.icaGl or "",
-                                        icaEs = bestAir.icaEs or "",
-                                        icaEn = bestAir.icaEn or "",
-                                        pollutant = polCode,
-                                        pollutantLabel = polLabel,
-                                        pollutantUnit = polUnit,
-                                        value = tonumber(bestAir.valor) or 0,
-                                        color = bestAir.color or "",
-                                        time = hhmm,
-                                    }
+
+                                table.sort(validList, function(a, b)
+                                    return a.distanceKm < b.distanceKm
+                                end)
+
+                                if #validList > 0 then
+                                    airData = validList[1]
+                                    for i = 1, math.min(3, #validList) do
+                                        table.insert(airStations, validList[i])
+                                    end
                                 end
                             end
                         end
-                        finishPayload(hVal, sName, airData)
+                        finishPayload(hVal, sName, airData, airStations)
                     end)
                 end
 

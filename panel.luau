@@ -14,6 +14,7 @@ local isLoading = false
 local render: () -> () = function() end
 
 local isSearchingConcello = false
+local isShowingAirQualityDetail = false
 local concelloSearchQuery = ""
 local selectedProvince: number? = nil
 
@@ -278,6 +279,10 @@ function onOpenWeb()
     noctalia.runAsync(string.format("xdg-open 'https://www.meteogalicia.gal/web/predicion/concellos/%d/0'", id))
 end
 
+function onOpenAirWeb()
+    noctalia.runAsync("xdg-open 'https://www.meteogalicia.gal/web/medioambiente/calidadeAire/calidadeAireIndex.action'")
+end
+
 function onOpenSettings()
     if type(panel.close) == "function" then
         panel.close()
@@ -319,7 +324,16 @@ end
 function onToggleSearchConcello()
     isSearchingConcello = not isSearchingConcello
     if isSearchingConcello then
+        isShowingAirQualityDetail = false
         concelloSearchQuery = ""
+    end
+    render()
+end
+
+function onToggleAirQualityDetail()
+    isShowingAirQualityDetail = not isShowingAirQualityDetail
+    if isShowingAirQualityDetail then
+        isSearchingConcello = false
     end
     render()
 end
@@ -368,6 +382,7 @@ function onSelectConcello(cId: number, cName: string)
     local cmd = string.format("python3 ~/.config/noctalia/plugins/meteogalicia/scripts/set_concello.py %d %q", cId, cName)
     noctalia.runAsync(cmd)
     isSearchingConcello = false
+    isShowingAirQualityDetail = false
     noctalia.state.set("weather_request_refresh", true)
     render()
 end
@@ -382,10 +397,16 @@ function onKey(chord: string?, pressed: boolean)
         if isSearchingConcello then
             isSearchingConcello = false
             render()
+        elseif isShowingAirQualityDetail then
+            isShowingAirQualityDetail = false
+            render()
         elseif type(panel.close) == "function" then
             panel.close()
         end
+    elseif (cleanKey == "a" or cleanKey == "q") and not isSearchingConcello then
+        onToggleAirQualityDetail()
     elseif (cleanKey == "f" or cleanKey == "/") and not isSearchingConcello then
+        isShowingAirQualityDetail = false
         isSearchingConcello = true
         concelloSearchQuery = ""
         render()
@@ -572,17 +593,35 @@ render = function()
         sunset = sunset or s_time
     end
 
-    local makeHeaderCard = function(iconName: string, iconColor: string, labelText: string, valueText: string, tooltipText: string?)
+    local makeHeaderCard = function(iconName: string, iconColor: string, labelText: string, valueText: string, tooltipText: string?, onClickAction: any?, isActive: boolean?)
+        local cardFill = isActive and cardBgActive or cardBgNorm
+        local cardBorder = isActive and "primary" or (onClickAction and "outline_variant/0.4" or "outline_variant/0.25")
+        local titleChildren = {
+            ui.label({
+                text = labelText,
+                fontSize = math.max(10, math.floor(s.headerSunText * 0.82)),
+                color = isActive and "primary" or "on_surface_variant",
+                fontWeight = isActive and "bold" or "normal",
+            }),
+        }
+        if onClickAction then
+            table.insert(titleChildren, ui.glyph({
+                name = isActive and "chevron-up" or "chevron-down",
+                size = 11,
+                color = isActive and "primary" or "on_surface_variant",
+            }))
+        end
         return ui.row({
             gap = math.max(6, math.floor(s.headerSunGap * 0.45)),
             align = "center",
             paddingH = math.max(10, math.floor(s.headerSunPadH * 0.65)),
             paddingV = math.max(5, math.floor(s.headerSunPadV * 0.7)),
             radius = 12,
-            fill = cardBgNorm,
-            border = "outline_variant/0.25",
+            fill = cardFill,
+            border = cardBorder,
             borderWidth = 1,
             tooltip = tooltipText,
+            onClick = onClickAction,
         }, {
             ui.glyph({
                 name = iconName,
@@ -590,11 +629,7 @@ render = function()
                 color = iconColor,
             }),
             ui.column({ gap = 1 }, {
-                ui.label({
-                    text = labelText,
-                    fontSize = math.max(10, math.floor(s.headerSunText * 0.82)),
-                    color = "on_surface_variant",
-                }),
+                ui.row({ gap = 4, align = "center" }, titleChildren),
                 ui.label({
                     text = valueText,
                     fontSize = math.max(13, math.floor(s.headerSunTime * 0.72)),
@@ -723,7 +758,8 @@ render = function()
         icaTip = table.concat({ titleLine, modelLine, recLine }, "\n")
     end
 
-    local cardAirQuality = makeHeaderCard("leaf", icaColor, tr("ui.air_quality_title", "Calidade aire"), icaDesc, icaTip)
+    local clickHint = "\n\n👆 " .. tr("ui.aqi.click_hint")
+    local cardAirQuality = makeHeaderCard("leaf", icaColor, tr("ui.air_quality_title", "Calidade aire"), icaDesc, icaTip .. clickHint, "onToggleAirQualityDetail", isShowingAirQualityDetail)
 
     local headerCards = ui.row({ gap = math.max(6, math.floor(s.panelGap * 0.5)), align = "center" }, {
         cardSunrise,
@@ -806,6 +842,248 @@ render = function()
     })
 
     rootChildren[#rootChildren + 1] = headerRow
+
+    if isShowingAirQualityDetail then
+        local stations = (cur and cur.airQualityStations) or {}
+        local stationCards = {}
+
+        for i, st in ipairs(stations) do
+            local stIca = tonumber(st.ica) or 0
+            local stLevel = 1
+            if stIca >= 4.0 then
+                stLevel = 5
+            elseif stIca >= 3.0 then
+                stLevel = 4
+            elseif stIca >= 2.0 then
+                stLevel = 3
+            elseif stIca >= 1.0 then
+                stLevel = 2
+            else
+                stLevel = 1
+            end
+
+            local stColor = isDark and "#34d399" or "#059669"
+            local stDesc = tr("ui.aqi.good")
+            local stRecKey = "ui.aqi.rec_1"
+            if stLevel == 5 then
+                stColor = isDark and "#f87171" or "#dc2626"
+                stDesc = tr("ui.aqi.very_poor")
+                stRecKey = "ui.aqi.rec_5"
+            elseif stLevel == 4 then
+                stColor = isDark and "#fb923c" or "#ea580c"
+                stDesc = tr("ui.aqi.poor")
+                stRecKey = "ui.aqi.rec_4"
+            elseif stLevel == 3 then
+                stColor = isDark and "#fbbf24" or "#d97706"
+                stDesc = tr("ui.aqi.moderate")
+                stRecKey = "ui.aqi.rec_3"
+            elseif stLevel == 2 then
+                stColor = isDark and "#38bdf8" or "#0284c7"
+                stDesc = tr("ui.aqi.fair")
+                stRecKey = "ui.aqi.rec_2"
+            end
+
+            if isEn and st.icaEn and st.icaEn ~= "" then
+                stDesc = st.icaEn
+            elseif st.icaGl and st.icaGl ~= "" then
+                stDesc = st.icaGl
+            end
+
+            local isPrimary = (i == 1)
+            local distStr = st.approxKm and string.format("~%d km", st.approxKm) or (st.distanceKm and string.format("%.1f km", st.distanceKm) or "")
+
+            local card = ui.column({
+                gap = 10,
+                paddingH = math.max(14, math.floor(s.panelPadding * 0.7)),
+                paddingV = math.max(12, math.floor(s.panelPadding * 0.6)),
+                radius = 12,
+                fill = isPrimary and cardBgActive or cardBgNorm,
+                border = isPrimary and "primary/0.45" or "outline_variant/0.25",
+                borderWidth = 1,
+                flexGrow = 1,
+            }, {
+                ui.row({ gap = 8, align = "center" }, {
+                    ui.glyph({ name = "map-pin", size = 15, color = isPrimary and "primary" or "on_surface_variant" }),
+                    ui.label({
+                        text = st.station or "Estación",
+                        fontSize = math.max(13, math.floor(s.headerDesc * 0.95)),
+                        fontWeight = "bold",
+                        color = isPrimary and "primary" or "on_surface",
+                    }),
+                    distStr ~= "" and ui.label({
+                        text = "(" .. distStr .. ")",
+                        fontSize = 11,
+                        color = "on_surface_variant",
+                    }) or nil,
+                    ui.spacer(),
+                    st.time and st.time ~= "" and ui.row({ gap = 3, align = "center" }, {
+                        ui.glyph({ name = "clock", size = 11, color = "on_surface_variant" }),
+                        ui.label({ text = st.time, fontSize = 11, color = "on_surface_variant" }),
+                    }) or nil,
+                }),
+                ui.row({
+                    gap = 8,
+                    align = "center",
+                    paddingH = 10,
+                    paddingV = 6,
+                    radius = 8,
+                    fill = isDark and "#141720" or "#e2e8f0",
+                    border = "outline_variant/0.15",
+                    borderWidth = 1,
+                }, {
+                    ui.glyph({ name = "leaf", size = 16, color = stColor }),
+                    ui.label({
+                        text = stDesc,
+                        fontSize = 13,
+                        fontWeight = "bold",
+                        color = stColor,
+                    }),
+                    ui.spacer(),
+                    ui.label({
+                        text = string.format("ICA %.1f", stIca),
+                        fontSize = 12,
+                        fontWeight = "bold",
+                        color = "on_surface_variant",
+                    }),
+                }),
+                ui.column({ gap = 2 }, {
+                    ui.label({
+                        text = tr("ui.aqi.critical_pollutant"),
+                        fontSize = 10,
+                        color = "on_surface_variant",
+                    }),
+                    ui.row({ gap = 6, align = "center" }, {
+                        ui.label({
+                            text = st.pollutantLabel or st.pollutant or "--",
+                            fontSize = 13,
+                            fontWeight = "bold",
+                            color = "on_surface",
+                        }),
+                        ui.label({
+                            text = string.format("%.1f %s", st.value or 0, st.pollutantUnit or "µg/m³"),
+                            fontSize = 12,
+                            color = "on_surface_variant",
+                        }),
+                    }),
+                }),
+                ui.label({
+                    text = tr(stRecKey),
+                    fontSize = 11,
+                    color = "on_surface_variant",
+                }),
+            })
+
+            table.insert(stationCards, card)
+        end
+
+        local stationsContainer
+        if #stationCards > 0 then
+            stationsContainer = ui.row({ gap = 12, align = "stretch" }, stationCards)
+        else
+            stationsContainer = ui.row({ align = "center", justify = "center", padding = 24 }, {
+                ui.label({
+                    text = tr("ui.aqi.no_stations_nearby"),
+                    fontSize = s.hourlyTemp,
+                    color = "on_surface_variant",
+                }),
+            })
+        end
+
+        local airDetailBox = ui.column({
+            gap = 14,
+            padding = math.max(14, math.floor(s.panelPadding * 0.75)),
+            radius = 16,
+            fill = cardBgNorm,
+            border = "primary/0.4",
+            borderWidth = 1,
+        }, {
+            ui.row({ gap = 12, align = "center" }, {
+                ui.glyph({ name = "leaf", size = 22, color = "primary" }),
+                ui.column({ gap = 2 }, {
+                    ui.label({
+                        text = tr("ui.aqi.detail_title"),
+                        fontSize = math.max(15, math.floor(s.headerTown * 0.8)),
+                        fontWeight = "bold",
+                        color = "on_surface",
+                    }),
+                    ui.label({
+                        text = string.format(tr("ui.aqi.detail_subtitle"), weather.officialName or weather.concelloName or "Galicia"),
+                        fontSize = math.max(11, math.floor(s.headerDesc * 0.8)),
+                        color = "on_surface_variant",
+                    }),
+                }),
+                ui.spacer(),
+                ui.button({
+                    text = tr("ui.aqi.back_to_forecast"),
+                    glyph = "arrow-left",
+                    variant = "primary",
+                    controlSize = s.btnSize,
+                    onClick = "onToggleAirQualityDetail",
+                }),
+            }),
+            ui.separator(),
+            stationsContainer,
+            ui.separator(),
+            ui.row({ gap = 10, align = "center" }, {
+                ui.glyph({ name = "info", size = 15, color = "on_surface_variant" }),
+                ui.label({
+                    text = tr("ui.aqi.footer_notice"),
+                    fontSize = 11,
+                    color = "on_surface_variant",
+                    flexGrow = 1,
+                }),
+                ui.button({
+                    text = "MeteoGalicia Aire",
+                    glyph = "external-link",
+                    variant = "ghost",
+                    controlSize = s.btnSize,
+                    onClick = "onOpenAirWeb",
+                }),
+            }),
+        })
+
+        rootChildren[#rootChildren + 1] = airDetailBox
+
+        local indicators = {}
+        if weather.stationName and weather.stationName ~= "" then
+            indicators[#indicators + 1] = ui.row({ gap = 4, align = "center" }, {
+                ui.glyph({ name = "map-pin", size = s.footerIcon, color = "on_surface_variant" }),
+                ui.label({ text = weather.stationName, fontSize = s.footerText, color = "on_surface_variant" }),
+            })
+        end
+        if weather.updatedAt then
+            indicators[#indicators + 1] = ui.row({ gap = 4, align = "center" }, {
+                ui.glyph({ name = "clock", size = s.footerIcon, color = "on_surface_variant" }),
+                ui.label({ text = (tr("ui.updated") .. ": ") .. tostring(weather.updatedAt), fontSize = s.footerText, color = "on_surface_variant" }),
+            })
+        end
+
+        local footerRow = ui.row({ gap = 16, align = "center" }, {
+            ui.row({ gap = 14, align = "center" }, indicators),
+            ui.spacer(),
+            ui.button({
+                text = tr("ui.open_web", "MeteoGalicia"),
+                glyph = "external-link",
+                variant = "outline",
+                controlSize = s.btnSize,
+                onClick = "onOpenWeb",
+            }),
+        })
+
+        rootChildren[#rootChildren + 1] = footerRow
+
+        panel.render(ui.column({
+            gap = s.panelGap,
+            padding = s.panelPadding,
+            align = "stretch",
+            fill = rootFill,
+            radius = 16,
+            border = "outline_variant/0.25",
+            borderWidth = 1,
+        }, rootChildren))
+
+        return
+    end
 
     if isSearchingConcello then
         local matches = filterConcellos()
