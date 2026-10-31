@@ -690,7 +690,8 @@ render = function()
         local titleLine = string.format("🍃 %s: %s", tr("ui.air_quality_title"), icaFull)
         local stationLine = ""
         if aq.distanceKm and aq.distanceKm > 0 then
-            stationLine = string.format("📍 %s", i18n.format("ui.aqi.station", aq.station, aq.distanceKm, aq.time or ""))
+            local approxKm = math.max(1, math.floor(aq.distanceKm + 0.5))
+            stationLine = string.format("📍 %s", i18n.format("ui.aqi.station", aq.station, approxKm, aq.time or ""))
         else
             stationLine = string.format("📍 %s", i18n.format("ui.aqi.station_simple", aq.station, aq.time or ""))
         end

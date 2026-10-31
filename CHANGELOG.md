@@ -4,7 +4,7 @@
 
 - Integrar a rede de estacións de calidade do aire de MeteoGalicia en tempo real (`jsonICAActual.action`).
 - Abrir un tooltip flotante detallado ao pousar o rato sobre a tarxeta de calidade do aire con:
-  - Estación de medición máis próxima e distancia en quilómetros (cálculo xeodésico esférico).
+  - Estación de referencia máis próxima e distancia comarcal estimada en quilómetros (cálculo xeodésico dende a capitalidade municipal).
   - Contaminante determinante crítico ($\text{PM}_{2.5}$, $\text{PM}_{10}$, $\text{NO}_2$, $\text{O}_3$, $\text{SO}_2$) e a súa concentración exacta en $\mu\text{g}/\text{m}^3$.
   - Índice cuantitativo continuo (ICA) e hora da última medición validada.
   - Recomendación sanitaria e de actividade exterior segundo o nivel oficial de calidade do aire.
