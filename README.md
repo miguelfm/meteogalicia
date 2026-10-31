@@ -42,7 +42,9 @@ ao contido ata un máximo de 980 píxeles lóxicos (adaptado e calibrado para pa
       * **Horarios solares**: Orto (amencer) e Ocaso (solpor) calculados astronomicamente polas coordenadas exactas do municipio.
       * **Vento actual**: Frecha vectorial de orientación real de compás (`↑`, `↗`, `→`, `↘`, `↓`, `↙`, `←`, `↖`), velocidade instantánea en km/h e descrición oficial no *tooltip*.
       * **Humidade relativa en tempo real (💧 %)**: Conexión directa coa rede de observación cada 10 minutos de MeteoGalicia (`ultimos10minEstacionsMeteo`), emparellando automaticamente coa estación meteorolóxica máis próxima ao concello (ex: CIS Ferrol para Fene).
-      * **Calidade do aire (ICA)**: Avaliación cualitativa actual (*Boa*, *Razoable*, *Mala*, *Moi mala*) con indicador cromático adaptado.
+      * **Calidade do aire en tempo real (🍃 ICA)**: Conexión directa coas 46 estacións da Rede de Calidade do Aire de Galicia (`jsonICAActual.action`), emparellando xeodesicamente coas estacións máis próximas á capitalidade municipal:
+        * **Tooltip enriquecido**: Amosa o nivel cualitativo, índice numérico continuo (ex: `Boa (ICA 0.6)`), estación de referencia con distancia exacta en quilómetros (ex: `Xubia (5.1 km) · 22:00`), contaminante determinante crítico con fórmula química e concentración (`PM₂.₅: 5.9 µg/m³`) e recomendación sanitaria oficial.
+        * **Dashboard comparativo interactivo das 3 estacións máis próximas**: Ao premer na tarxeta ou usando os atallos <kbd>A</kbd> / <kbd>Q</kbd>, ábrese unha vista detallada con 3 columnas independentes que comparan en paralelo as estacións máis próximas ordenadas por distancia real calculada mediante Haversine, con botón para volver á predición (<kbd>Esc</kbd>) e ligazón directa ao portal interactivo oficial de calidade do aire de MeteoGalicia (`/web/ica/portada`).
     * Temperatura instantánea destacada con graos centígrados, rango diario de temperaturas mínima e máxima (`↓ mín° ↑ máx°`), e botóns de axustes e actualización inmediata.
   * **Predición horaria interactiva (ata 48 horas, opcional)**:
     * Carrusel con tarxetas horarias mostrando a hora, glifo, temperatura prevista e probabilidade de choiva (💧 %).
@@ -80,6 +82,7 @@ Cando o panel estea aberto, pódense empregar os seguintes controis e atallos di
 | Tecla / Xesto | Acción |
 | :--- | :--- |
 | <kbd>F</kbd> ou <kbd>/</kbd> | Abrir / pechar o **buscador interactivo de concellos** (313 municipios) |
+| <kbd>A</kbd> ou <kbd>Q</kbd> | Abrir / pechar o **detalle comparativo de calidade do aire** (3 estacións máis próximas) |
 | <kbd>←</kbd> (Frecha Esquerda) ou <kbd>[</kbd> | Desprazar a predición horaria **1 hora cara atrás** |
 | <kbd>→</kbd> (Frecha Dereita) ou <kbd>]</kbd> | Desprazar a predición horaria **1 hora cara adiante** |
 | <kbd>Re Páx</kbd> (Page Up) | Retroceder **12 horas** (bloque anterior) |
@@ -89,7 +92,7 @@ Cando o panel estea aberto, pódense empregar os seguintes controis e atallos di
 | **Roda do rato** | Desprazar hora a hora (tanto sobre o panel como sobre a cápsula da barra) |
 | <kbd>R</kbd> | Forzar a actualización inmediata dos datos dende a API |
 | <kbd>S</kbd> / <kbd>C</kbd> | Abrir a xanela de axustes do plugin en Noctalia |
-| <kbd>Esc</kbd> | Pechar a busca de concellos / Pechar o panel emerxente |
+| <kbd>Esc</kbd> | Pechar a busca de concellos / Pechar o detalle de calidade do aire / Pechar o panel emerxente |
 
 ---
 
