@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.2 — 2026-11-04
+
+- Resiliencia no arranque en paralelo con Fast Boot:
+  - Engadir reintentos automáticos progresivos (8s inicial, 16s, 24s... ata 60s) ante fallos iniciais de rede ou resolución DNS antes da asociación Wi-Fi, restaurando o intervalo regular de actualización ao acadar conexión.
+  - Implementar o ciclo `update()` para a execución periódica nativa polo runtime de Noctalia.
+  - Substituír a función legada `onMessage` por `onIpc(action, payload)` garantindo o funcionamento do refresco manual tanto dende o clic dereito da barra (`plugin miguelfm/meteogalicia:poller all refresh`) como dende a liña de comandos.
+  - Engadir `onConfigChanged()` para refresco inmediato ante cambios de axustes.
+
 ## 1.3.1 — 2026-10-31
 
 - Corrixir a ligazón web de calidade do aire de MeteoGalicia actualizándoa á ruta oficial actual (`/web/ica/portada`) en substitución do antigo enderezo que devolvía erro 404 no navegador.

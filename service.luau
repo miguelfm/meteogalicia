@@ -15,6 +15,15 @@ for _, c in ipairs(concellos) do
 end
 
 local inFlight = false
+local retryCount = 0
+local RETRY_BASE_MS = 8000
+local RETRY_MAX_MS = 60000
+
+local function scheduleRetry()
+    retryCount = retryCount + 1
+    local delayMs = math.min(RETRY_MAX_MS, RETRY_BASE_MS * retryCount)
+    noctalia.setUpdateInterval(delayMs)
+end
 
 local function getConfig()
     local stateId = noctalia.state.get("concello_id")
@@ -34,7 +43,9 @@ local function poll()
     noctalia.state.set("weather_loading", true)
 
     local concelloId, concelloName, refreshMinutes = getConfig()
-    noctalia.setUpdateInterval(refreshMinutes * 60 * 1000)
+    if retryCount == 0 then
+        noctalia.setUpdateInterval(refreshMinutes * 60 * 1000)
+    end
 
     local headers = {
         "apikey: " .. shared.API_KEY,
@@ -54,6 +65,7 @@ local function poll()
             inFlight = false
             noctalia.state.set("weather_loading", false)
             noctalia.state.set("weather_error", { key = "error.daily_http", status = dailyRes and dailyRes.status, network = not (dailyRes and dailyRes.status) })
+            scheduleRetry()
             return
         end
 
@@ -62,6 +74,7 @@ local function poll()
             inFlight = false
             noctalia.state.set("weather_loading", false)
             noctalia.state.set("weather_error", { key = dailyError == "empty" and "error.daily_empty" or "error.daily_invalid" })
+            scheduleRetry()
             return
         end
 
@@ -87,6 +100,7 @@ local function poll()
                 inFlight = false
                 noctalia.state.set("weather_loading", false)
                 noctalia.state.set("weather_error", { key = "error.hourly_http", status = hourlyRes and hourlyRes.status, network = not (hourlyRes and hourlyRes.status) })
+                scheduleRetry()
                 return
             end
 
@@ -95,6 +109,7 @@ local function poll()
                 inFlight = false
                 noctalia.state.set("weather_loading", false)
                 noctalia.state.set("weather_error", { key = hourlyError == "empty" and "error.hourly_empty" or "error.hourly_invalid", date = hourlyError == "empty" and forecast.localDate(nowSec, 0) or nil })
+                scheduleRetry()
                 return
             end
 
@@ -413,6 +428,9 @@ local function poll()
 
                 local finishPayload = function(humidityVal: number?, stationName: string?, airQualityData: any?, airStations: any?)
                     inFlight = false
+                    retryCount = 0
+                    local _, _, refreshMinutes = getConfig()
+                    noctalia.setUpdateInterval(refreshMinutes * 60 * 1000)
                     noctalia.state.set("weather_loading", false)
 
                     local payload = {
@@ -551,17 +569,38 @@ end)
 end)
 end
 
--- Escoitar mensaxes (ex: `noctalia msg plugin miguelfm/meteogalicia:poller refresh`)
-function onMessage(action: string, _payload: any)
+-- Ciclo de refresco periódico polo runtime de Noctalia
+function update()
+    if inFlight then return end
+    poll()
+end
+
+-- Escoitar mensaxes IPC (ex: widget click dereito ou `noctalia msg plugin miguelfm/meteogalicia:poller all refresh`)
+function onIpc(action: string, _payload: any)
     if action == "refresh" then
+        retryCount = 0
         poll()
     end
+end
+
+-- Compatibilidade con chamadas legadas onMessage
+function onMessage(action: string, payload: any)
+    onIpc(action, payload)
+end
+
+-- Rexistrar cambios na configuración do plugin
+function onConfigChanged()
+    retryCount = 0
+    local _, _, refreshMinutes = getConfig()
+    noctalia.setUpdateInterval(refreshMinutes * 60 * 1000)
+    poll()
 end
 
 -- Rexistrar petición manual de refresco desde o panel ou widget
 noctalia.state.watch("weather_request_refresh", function(value)
     if value == true then
         noctalia.state.set("weather_request_refresh", false)
+        retryCount = 0
         poll()
     end
 end)
@@ -569,6 +608,7 @@ end)
 -- Rexistrar cambio de concello desde o buscador do panel
 noctalia.state.watch("concello_id", function(value)
     if value ~= nil then
+        retryCount = 0
         poll()
     end
 end)
